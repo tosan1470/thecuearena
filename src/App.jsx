@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 export default function App() {
+  const query = new URLSearchParams(window.location.search);
+  const success = query.get("success");
   const [bet, setBet] = useState("");
   const [balance, setBalance] = useState(10);
   const [match, setMatch] = useState(null);
