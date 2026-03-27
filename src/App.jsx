@@ -2,13 +2,25 @@ import { useState } from "react";
 
 export default function App() {
   const [bet, setBet] = useState("");
+  const [balance, setBalance] = useState(10);
   const [match, setMatch] = useState(null);
+
+  const handleDeposit = () => {
+    setBalance(balance + 10);
+  };
 
   const handleCreateMatch = () => {
     if (!bet || bet < 1) {
       alert("Minimum bet is $1");
       return;
     }
+
+    if (balance < bet) {
+      alert("Insufficient balance");
+      return;
+    }
+
+    setBalance(balance - bet);
 
     setMatch({
       bet,
@@ -18,6 +30,13 @@ export default function App() {
   };
 
   const handleJoinMatch = () => {
+    if (balance < match.bet) {
+      alert("Insufficient balance");
+      return;
+    }
+
+    setBalance(balance - match.bet);
+
     setMatch({
       ...match,
       status: "playing",
@@ -33,6 +52,9 @@ export default function App() {
   };
 
   const handleConfirm = () => {
+    const winnings = match.bet * 2 * 0.9;
+    setBalance(balance + winnings);
+
     setMatch({
       ...match,
       status: "completed",
@@ -49,7 +71,9 @@ export default function App() {
   return (
     <div style={{ padding: "30px", fontFamily: "Arial" }}>
       <h1>thecuearena</h1>
-      <p>Play. Compete. Win.</p>
+
+      <h3>Balance: ${balance.toFixed(2)}</h3>
+      <button onClick={handleDeposit}>Deposit $10</button>
 
       {!match && (
         <div style={{ marginTop: "20px" }}>
@@ -58,64 +82,40 @@ export default function App() {
             placeholder="Enter bet ($1 min)"
             value={bet}
             onChange={(e) => setBet(e.target.value)}
-            style={{ padding: "10px", marginRight: "10px" }}
           />
-
-          <button onClick={handleCreateMatch}>
-            Create Match
-          </button>
+          <button onClick={handleCreateMatch}>Create Match</button>
         </div>
       )}
 
       {match && match.status === "waiting" && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Match Created</h3>
+        <div>
           <p>Bet: ${match.bet}</p>
           <p>Waiting for opponent...</p>
-          <button onClick={handleJoinMatch}>
-            Join Match
-          </button>
+          <button onClick={handleJoinMatch}>Join Match</button>
         </div>
       )}
 
       {match && match.status === "playing" && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Game Started</h3>
-          <p>Bet: ${match.bet}</p>
-          <button onClick={handleSubmitWin}>
-            Submit Win (Player A)
-          </button>
+        <div>
+          <p>Game Started</p>
+          <button onClick={handleSubmitWin}>Submit Win</button>
         </div>
       )}
 
       {match && match.status === "pending" && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Result Submitted</h3>
+        <div>
           <p>{match.result}</p>
-          <p>Player B must confirm</p>
-
-          <button onClick={handleConfirm}>
-            Confirm
-          </button>
-
-          <button onClick={handleDispute} style={{ marginLeft: "10px" }}>
-            Dispute
-          </button>
+          <button onClick={handleConfirm}>Confirm</button>
+          <button onClick={handleDispute}>Dispute</button>
         </div>
       )}
 
       {match && match.status === "completed" && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Match Completed</h3>
-          <p>Winner Paid</p>
-        </div>
+        <p>Match Completed — Winner Paid</p>
       )}
 
       {match && match.status === "disputed" && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Match Disputed</h3>
-          <p>Admin review required</p>
-        </div>
+        <p>Match Disputed — Admin Review</p>
       )}
     </div>
   );
