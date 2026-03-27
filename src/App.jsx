@@ -13,6 +13,7 @@ export default function App() {
     setMatch({
       bet,
       status: "waiting",
+      result: null,
     });
   };
 
@@ -20,6 +21,28 @@ export default function App() {
     setMatch({
       ...match,
       status: "playing",
+    });
+  };
+
+  const handleSubmitWin = () => {
+    setMatch({
+      ...match,
+      status: "pending",
+      result: "Player A claims win",
+    });
+  };
+
+  const handleConfirm = () => {
+    setMatch({
+      ...match,
+      status: "completed",
+    });
+  };
+
+  const handleDispute = () => {
+    setMatch({
+      ...match,
+      status: "disputed",
     });
   };
 
@@ -59,7 +82,39 @@ export default function App() {
         <div style={{ marginTop: "20px" }}>
           <h3>Game Started</h3>
           <p>Bet: ${match.bet}</p>
-          <p>Both players are in the match</p>
+          <button onClick={handleSubmitWin}>
+            Submit Win (Player A)
+          </button>
+        </div>
+      )}
+
+      {match && match.status === "pending" && (
+        <div style={{ marginTop: "20px" }}>
+          <h3>Result Submitted</h3>
+          <p>{match.result}</p>
+          <p>Player B must confirm</p>
+
+          <button onClick={handleConfirm}>
+            Confirm
+          </button>
+
+          <button onClick={handleDispute} style={{ marginLeft: "10px" }}>
+            Dispute
+          </button>
+        </div>
+      )}
+
+      {match && match.status === "completed" && (
+        <div style={{ marginTop: "20px" }}>
+          <h3>Match Completed</h3>
+          <p>Winner Paid</p>
+        </div>
+      )}
+
+      {match && match.status === "disputed" && (
+        <div style={{ marginTop: "20px" }}>
+          <h3>Match Disputed</h3>
+          <p>Admin review required</p>
         </div>
       )}
     </div>
