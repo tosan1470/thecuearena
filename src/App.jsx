@@ -6,6 +6,11 @@ export default function App() {
   const [bet, setBet] = useState("");
   const [balance, setBalance] = useState(10);
   const [match, setMatch] = useState(null);
+  if (success) {
+  setTimeout(() => {
+    alert("Payment successful! $10 added to balance");
+  }, 500);
+}
 
 const handleDeposit = async () => {
   const response = await fetch("http://localhost:3000/create-checkout-session", {
