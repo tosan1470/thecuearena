@@ -5,9 +5,19 @@ export default function App() {
   const [balance, setBalance] = useState(10);
   const [match, setMatch] = useState(null);
 
-  const handleDeposit = () => {
-    setBalance(balance + 10);
-  };
+const handleDeposit = async () => {
+  const response = await fetch("http://localhost:3000/create-checkout-session", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ amount: 10 }),
+  });
+
+  const data = await response.json();
+
+  window.location.href = data.url;
+};
 
   const handleCreateMatch = () => {
     if (!bet || bet < 1) {
