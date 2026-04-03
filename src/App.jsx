@@ -13,7 +13,8 @@ export default function App() {
 }
 
 const handleDeposit = async () => {
-  const response = await fetch("http://thecuearena-backend.onrender.com/create-checkout-session", {
+  alert("clicked");
+  const response = await fetch("https://thecuearena-backend.onrender.com/create-checkout-session", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
