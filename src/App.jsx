@@ -27,8 +27,8 @@ const handleDeposit = async () => {
   window.location.href = data.url;
 };
 
-  const handleCreateMatch = () => { 
-      const entryFee = 1;
+  const handleCreateMatch = () => {
+  const entryFee = 1;
 
   if (balance < entryFee) {
     alert("Insufficient balance");
@@ -37,9 +37,13 @@ const handleDeposit = async () => {
 
   setBalance((prev) => prev - entryFee);
 
+  setMatch({
+    bet: entryFee,
+    status: "waiting",
+  });
+
   alert("Match created! Entry Fee deducted.");
-    
-  };
+};
 
 const handleJoinMatch = () => {
   const entryFee = 1;
