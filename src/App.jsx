@@ -55,6 +55,11 @@ const handleJoinMatch = () => {
 
   setBalance((prev) => prev - entryFee);
 
+  setMatch({
+    bet: entryFee,
+    status: "playing",
+  });
+
   alert("Match joined! Game starting...");
 };
 
