@@ -41,19 +41,18 @@ const handleDeposit = async () => {
     
   };
 
-  const handleJoinMatch = () => {
-    if (balance < match.bet) {
-      alert("Insufficient balance");
-      return;
-    }
+const handleJoinMatch = () => {
+  const entryFee = 1;
 
-    setBalance(balance - match.bet);
+  if (balance < entryFee) {
+    alert("Insufficient balance");
+    return;
+  }
 
-    setMatch({
-      ...match,
-      status: "playing",
-    });
-  };
+  setBalance((prev) => prev - entryFee);
+
+  alert("Match joined! Game starting...");
+};
 
   const handleSubmitWin = () => {
     setMatch({
