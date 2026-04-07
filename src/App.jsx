@@ -27,24 +27,18 @@ const handleDeposit = async () => {
   window.location.href = data.url;
 };
 
-  const handleCreateMatch = () => {
-    if (!bet || bet < 1) {
-      alert("Minimum bet is $1");
-      return;
-    }
+  const handleCreateMatch = () => { 
+      const entryFee = 1;
 
-    if (balance < bet) {
-      alert("Insufficient balance");
-      return;
-    }
+  if (balance < entryFee) {
+    alert("Insufficient balance");
+    return;
+  }
 
-    setBalance(balance - bet);
+  setBalance((prev) => prev - entryFee);
 
-    setMatch({
-      bet,
-      status: "waiting",
-      result: null,
-    });
+  alert("Match created! Entry Fee deducted.");
+    
   };
 
   const handleJoinMatch = () => {
