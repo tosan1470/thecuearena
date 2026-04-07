@@ -54,23 +54,15 @@ const handleJoinMatch = () => {
   alert("Match joined! Game starting...");
 };
 
-  const handleSubmitWin = () => {
-    setMatch({
-      ...match,
-      status: "pending",
-      result: "Player A claims win",
-    });
-  };
+const handleSubmitWin = () => {
+  const totalPool = 2;        // 2 players × $1
+  const platformFee = totalPool * 0.1;  // 10%
+  const winnings = totalPool - platformFee;
 
-  const handleConfirm = () => {
-    const winnings = match.bet * 2 * 0.9;
-    setBalance(balance + winnings);
+  setBalance((prev) => prev + winnings);
 
-    setMatch({
-      ...match,
-      status: "completed",
-    });
-  };
+  alert("You won! $" + winnings.toFixed(2) + " added to your balance.");
+};
 
   const handleDispute = () => {
     setMatch({
