@@ -64,13 +64,18 @@ const handleJoinMatch = () => {
 };
 
 const handleSubmitWin = () => {
-  const totalPool = 2;        // 2 players × $1
-  const platformFee = totalPool * 0.1;  // 10%
+  const totalPool = 2;
+  const platformFee = totalPool * 0.1;
   const winnings = totalPool - platformFee;
 
   setBalance((prev) => prev + winnings);
 
   alert("You won! $" + winnings.toFixed(2) + " added to your balance.");
+
+  // Force reset AFTER alert
+  setTimeout(() => {
+    setMatch(null);
+  }, 100);
 };
 
   const handleDispute = () => {
