@@ -70,12 +70,11 @@ const handleSubmitWin = () => {
 
   setBalance((prev) => prev + winnings);
 
-  alert("You won! $" + winnings.toFixed(2) + " added to your balance.");
+  setMatch({
+    status: "finished",
+  });
 
-  // Force reset AFTER alert
-  setTimeout(() => {
-    setMatch(null);
-  }, 100);
+  alert("You won! $" + winnings.toFixed(2) + " added to your balance.");
 };
 
   const handleRematch = () => {
