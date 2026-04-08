@@ -78,6 +78,24 @@ const handleSubmitWin = () => {
   }, 100);
 };
 
+  const handleRematch = () => {
+  const entryFee = 1;
+
+  if (balance < entryFee) {
+    alert("Insufficient balance for rematch");
+    return;
+  }
+
+  setBalance((prev) => prev - entryFee);
+
+  setMatch({
+    bet: entryFee,
+    status: "waiting",
+  });
+
+  alert("Rematch created! Waiting for opponent...");
+};
+  
   const handleDispute = () => {
     setMatch({
       ...match,
@@ -116,6 +134,7 @@ const handleSubmitWin = () => {
         <div>
           <p>Game Started</p>
           <button onClick={handleSubmitWin}>Submit Win</button>
+          <button onClick={handleRematch}>Rematch ($1 Entry Fee)</button>
         </div>
       )}
 
