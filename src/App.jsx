@@ -62,7 +62,6 @@ const handleJoinMatch = () => {
 
   alert("Match joined! Game starting...");
 };
-
 const handleSubmitWin = () => {
   const totalPool = 2;
   const platformFee = totalPool * 0.1;
@@ -70,13 +69,25 @@ const handleSubmitWin = () => {
 
   setBalance((prev) => prev + winnings);
 
-  setMatch({
-    status: "finished",
-  });
-
   alert("You won! $" + winnings.toFixed(2) + " added to your balance.");
-};
 
+  setTimeout(() => {
+    const entryFee = 1;
+
+    if (balance >= entryFee) {
+      setBalance((prev) => prev - entryFee);
+
+      setMatch({
+        bet: entryFee,
+        status: "playing",
+      });
+    } else {
+      setMatch({
+        status: "finished",
+      });
+    }
+  }, 1500);
+};
   const handleRematch = () => {
   const entryFee = 1;
 
