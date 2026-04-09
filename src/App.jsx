@@ -5,6 +5,7 @@ export default function App() {
   const success = query.get("success");
   const [bet, setBet] = useState("");
   const [balance, setBalance] = useState(10);
+  const [autoPlay, setAutoPlay] = useState(false);
   const [match, setMatch] = useState(null);
   if (success) {
   setTimeout(() => {
@@ -69,8 +70,8 @@ const handleSubmitWin = () => {
 
   setBalance((prev) => prev + winnings);
 
-  alert("You won! $" + winnings.toFixed(2) + " added to your balance.");
-
+alert("You won! $" + winnings.toFixed(2) + ". Next match starting...");
+ if (autoPlay) {
   setTimeout(() => {
     const entryFee = 1;
 
@@ -87,6 +88,11 @@ const handleSubmitWin = () => {
       });
     }
   }, 1500);
+} else {
+  setMatch({
+    status: "finished",
+  });
+}
 };
   const handleRematch = () => {
   const entryFee = 1;
@@ -159,7 +165,19 @@ const handleSubmitWin = () => {
           <button onClick={handleDispute}>Dispute</button>
         </div>
       )}
+{match && match.status === "finished" && (
+  <div>
+    <p>Game Finished</p>
 
+    <button onClick={handleRematch}>
+      Rematch ($1 Entry Fee)
+    </button>
+
+    <button onClick={() => setAutoPlay(!autoPlay)}>
+      Auto Play: {autoPlay ? "ON" : "OFF"}
+    </button>
+  </div>
+)}
       {match && match.status === "completed" && (
         <p>Match Completed — Winner Paid</p>
       )}
