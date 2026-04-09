@@ -133,10 +133,14 @@ const handleSubmitWin = () => {
         <div>
           <p>Game Started</p>
           <button onClick={handleSubmitWin}>Submit Win</button>
-          <button onClick={handleRematch}>Rematch ($1 Entry Fee)</button>
         </div>
       )}
-
+{match && match.status === "finished" && (
+  <div>
+    <p>Game Finished</p>
+    <button onClick={handleRematch}>Rematch ($1 Entry Fee)</button>
+  </div>
+)}
       {match && match.status === "pending" && (
         <div>
           <p>{match.result}</p>
