@@ -89,7 +89,7 @@ const handleSubmitWin = () => {
 
   setMatch({
     bet: entryFee,
-    status: "waiting",
+    status: "playing",
   });
 
   alert("Rematch created! Waiting for opponent...");
