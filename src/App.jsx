@@ -70,30 +70,25 @@ const handleSubmitWin = () => {
 
   setBalance((prev) => prev + winnings);
 
-alert("You won! $" + winnings.toFixed(2) + ". Next match starting...");
- if (autoPlay) {
+alert("You won! $" + winnings.toFixed(2));
+
+if (false) {
   setTimeout(() => {
     const entryFee = 1;
 
-    if (balance >= entryFee) {
-      setBalance((prev) => prev - entryFee);
+    setBalance((prev) => prev - entryFee);
 
-      setMatch({
-        bet: entryFee,
-        status: "playing",
-      });
-    } else {
-      setMatch({
-        status: "finished",
-      });
-    }
+    setMatch({
+      bet: entryFee,
+      status: "playing",
+    });
   }, 1500);
 } else {
   setMatch({
     status: "finished",
   });
 }
-};
+
   const handleRematch = () => {
   const entryFee = 1;
 
@@ -152,27 +147,15 @@ alert("You won! $" + winnings.toFixed(2) + ". Next match starting...");
           <button onClick={handleSubmitWin}>Submit Win</button>
         </div>
       )}
+
 {match && match.status === "finished" && (
   <div>
-    <p>Game Finished</p>
-    <button onClick={handleRematch}>Rematch ($1 Entry Fee)</button>
-  </div>
-)}
-      {match && match.status === "pending" && (
-        <div>
-          <p>{match.result}</p>
-          <button onClick={handleConfirm}>Confirm</button>
-          <button onClick={handleDispute}>Dispute</button>
-        </div>
-      )}
-{match && match.status === "finished" && (
-  <div>
-    <p>Game Finished</p>
+ <p>Game Finished</p>
 
     <button onClick={handleRematch}>
       Rematch ($1 Entry Fee)
-    </button>
-
+    </button>  
+    
     <button onClick={() => setAutoPlay(!autoPlay)}>
       Auto Play: {autoPlay ? "ON" : "OFF"}
     </button>
