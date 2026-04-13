@@ -70,9 +70,8 @@ const handleSubmitWin = () => {
 
   setBalance((prev) => prev + winnings);
 
-alert("You won! $" + winnings.toFixed(2));
-
-if (false) {
+alert("You won! $" + winnings.toFixed(2) + (autoPlay ? " — Next match starting..." : ""));
+if (autoPlay){
   setTimeout(() => {
     const entryFee = 1;
 
