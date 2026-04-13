@@ -88,7 +88,8 @@ if (false) {
     status: "finished",
   });
 }
-
+};
+  
   const handleRematch = () => {
   const entryFee = 1;
 
