@@ -9,7 +9,10 @@ export default function App() {
   const [match, setMatch] = useState(null);
   if (success) {
   setTimeout(() => {
+    setBalance((prev) => prev + 10);
     alert("Payment successful! $10 added to balance");
+
+    window.history.replaceState({}, document.title, "/");
   }, 500);
 }
 
@@ -71,15 +74,22 @@ const handleSubmitWin = () => {
   setBalance((prev) => prev + winnings);
 
 alert("You won! $" + winnings.toFixed(2) + (autoPlay ? " — Next match starting..." : ""));
-if (autoPlay){
+if (autoPlay) {
   setTimeout(() => {
     const entryFee = 1;
 
-    setBalance((prev) => prev - entryFee);
+    setBalance((prev) => {
+      if (prev < entryFee) {
+        setMatch({ status: "finished" });
+        return prev;
+      }
 
-    setMatch({
-      bet: entryFee,
-      status: "playing",
+      setMatch({
+        bet: entryFee,
+        status: "playing",
+      });
+
+      return prev - entryFee;
     });
   }, 1500);
 } else {
@@ -88,7 +98,6 @@ if (autoPlay){
   });
 }
 };
-  
   const handleRematch = () => {
   const entryFee = 1;
 
