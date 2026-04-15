@@ -31,7 +31,7 @@ const handleDeposit = async () => {
   window.location.href = data.url;
 };
 
-  const handleCreateMatch = () => {
+const handleCreateMatch = () => {
   const entryFee = 1;
 
   if (balance < entryFee) {
@@ -40,6 +40,8 @@ const handleDeposit = async () => {
   }
 
   setBalance((prev) => prev - entryFee);
+
+  alert("Match created! Entry Fee deducted.");
 
   setMatch({
   bet: entryFee,
@@ -53,8 +55,8 @@ const handleDeposit = async () => {
     status: "playing",
     opponentJoined: true,
   });
-}, 2000);
-  alert("Match created! Entry Fee deducted.");
+}, 5000);    
+ 
 };
 
 const handleJoinMatch = () => {
@@ -154,7 +156,6 @@ if (autoPlay) {
         <div>
           <p>Bet: ${match.bet}</p>
           <p>Waiting for opponent...</p>
-          <button onClick={handleJoinMatch}>Join Match</button>
         </div>
       )}
 
