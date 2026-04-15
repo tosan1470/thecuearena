@@ -42,10 +42,18 @@ const handleDeposit = async () => {
   setBalance((prev) => prev - entryFee);
 
   setMatch({
-    bet: entryFee,
-    status: "waiting",
-  });
+  bet: entryFee,
+  status: "waiting",
+  opponentJoined: false,
+});
 
+ setTimeout(() => {
+  setMatch({
+    bet: entryFee,
+    status: "playing",
+    opponentJoined: true,
+  });
+}, 2000);
   alert("Match created! Entry Fee deducted.");
 };
 
