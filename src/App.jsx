@@ -132,13 +132,25 @@ if (autoPlay) {
       status: "disputed",
     });
   };
+const handleFetchMatches = async () => {
+  try {
+    const response = await fetch("https://thecuearena-backend.onrender.com/matches");
+    const data = await response.json();
 
+    console.log("Matches:", data);
+    alert("Check console for matches");
+  } catch (err) {
+    console.error(err);
+    alert("Error fetching matches");
+  }
+  };
   return (
     <div style={{ padding: "30px", fontFamily: "Arial" }}>
       <h1>thecuearena</h1>
 
       <h3>Balance: ${balance.toFixed(2)}</h3>
       <button onClick={handleDeposit}>Deposit $10</button>
+      <button onClick={handleFetchMatches}>Fetch Matches</button>
 
       {!match && (
         <div style={{ marginTop: "20px" }}>
