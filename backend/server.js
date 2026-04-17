@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const Stripe = require("stripe");
 let userBalance = 0;
+let matches = [];
 const app = express();
 app.use(cors());
 app.use(express.json());
