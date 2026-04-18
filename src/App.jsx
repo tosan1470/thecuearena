@@ -54,7 +54,7 @@ const handleCreateMatch = async () => {
     );
 
     const data = await response.json();
-
+    console.log("CREATE MATCH RESPONSE:", data);
     setMatch(data);
     alert("Match created!");
   } catch (err) {
