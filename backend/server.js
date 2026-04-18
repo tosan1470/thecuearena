@@ -52,4 +52,19 @@ app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
 app.get("/matches", (req, res) => {
   res.json(matches);
 });
+
+app.post("/create-match", (req, res) => {
+  const { bet } = req.body;
+
+  const newMatch = {
+    id: Date.now(),
+    bet,
+    status: "waiting",
+    opponentJoined: false,
+  };
+
+  matches.push(newMatch);
+
+  res.json(newMatch);
+});
 app.listen(3000, () => console.log("Server running on port 3000"));
