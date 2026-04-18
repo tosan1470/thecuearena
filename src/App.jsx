@@ -39,8 +39,6 @@ const handleCreateMatch = async () => {
     return;
   }
 
-  setBalance((prev) => prev - entryFee);
-
   try {
     const response = await fetch(
       "https://thecuearena-backend.onrender.com/create-match",
@@ -55,14 +53,16 @@ const handleCreateMatch = async () => {
 
     const data = await response.json();
     console.log("CREATE MATCH RESPONSE:", data);
+
+    setBalance((prev) => prev - entryFee);
     setMatch(data);
+
     alert("Match created!");
   } catch (err) {
     console.error(err);
     alert("Error creating match");
   }
 };
-
 const handleJoinMatch = () => {
   const entryFee = 1;
 
