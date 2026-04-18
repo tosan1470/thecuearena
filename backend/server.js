@@ -49,4 +49,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
 
   res.sendStatus(200);
 });
+app.get("/matches", (req, res) => {
+  res.json(matches);
+});
 app.listen(3000, () => console.log("Server running on port 3000"));
