@@ -31,7 +31,7 @@ const handleDeposit = async () => {
   window.location.href = data.url;
 };
 
-const handleCreateMatch = () => {
+const handleCreateMatch = async () => {
   const entryFee = 1;
 
   if (balance < entryFee) {
@@ -41,22 +41,26 @@ const handleCreateMatch = () => {
 
   setBalance((prev) => prev - entryFee);
 
-  alert("Match created! Entry Fee deducted.");
+  try {
+    const response = await fetch(
+      "https://thecuearena-backend.onrender.com/create-match",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bet: entryFee }),
+      }
+    );
 
-  setMatch({
-  bet: entryFee,
-  status: "waiting",
-  opponentJoined: false,
-});
+    const data = await response.json();
 
- setTimeout(() => {
-  setMatch({
-    bet: entryFee,
-    status: "playing",
-    opponentJoined: true,
-  });
-}, 5000);    
- 
+    setMatch(data);
+    alert("Match created!");
+  } catch (err) {
+    console.error(err);
+    alert("Error creating match");
+  }
 };
 
 const handleJoinMatch = () => {
