@@ -1,12 +1,13 @@
 import { useState } from "react";
-
+import { collection, addDoc, getDocs } from "firebase/firestore";
+import { db } from "./firebase";
 export default function App() {
   const query = new URLSearchParams(window.location.search);
   const success = query.get("success");
   const [bet, setBet] = useState("");
   const [balance, setBalance] = useState(10);
   const [autoPlay, setAutoPlay] = useState(false);
-  const [match, setMatch] = useState(null);
+const [matches, setMatches] = useState([]);
   if (success) {
   setTimeout(() => {
     setBalance((prev) => prev + 10);
@@ -40,22 +41,22 @@ const handleCreateMatch = async () => {
   }
 
   try {
-    const response = await fetch(
-      "https://thecuearena-backend.onrender.com/create-match",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ bet: entryFee }),
-      }
-    );
+    const docRef = await addDoc(collection(db, "matches"), {
+      bet: entryFee,
+      status: "waiting",
+      createdAt: Date.now(),
+    });
 
-    const data = await response.json();
-    console.log("CREATE MATCH RESPONSE:", data);
+    const matchData = {
+      id: docRef.id,
+      bet: entryFee,
+      status: "waiting",
+    };
+
+    console.log("MATCH SAVED:", matchData);
 
     setBalance((prev) => prev - entryFee);
-    setMatch(data);
+    setMatch(matchData);
 
     alert("Match created!");
   } catch (err) {
@@ -138,16 +139,21 @@ if (autoPlay) {
   };
 const handleFetchMatches = async () => {
   try {
-    const response = await fetch("https://thecuearena-backend.onrender.com/matches");
-    const data = await response.json();
+    const querySnapshot = await getDocs(collection(db, "matches"));
 
-    console.log("Matches:", data);
+    const matchesList = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    console.log("Matches:", matchesList);
+    setMatches(matchesList);
     alert("Check console for matches");
   } catch (err) {
     console.error(err);
     alert("Error fetching matches");
   }
-  };
+};
   return (
     <div style={{ padding: "30px", fontFamily: "Arial" }}>
       <h1>thecuearena</h1>
