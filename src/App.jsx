@@ -8,6 +8,7 @@ export default function App() {
   const [balance, setBalance] = useState(10);
   const [autoPlay, setAutoPlay] = useState(false);
 const [matches, setMatches] = useState([]);
+  const [match, setMatch] = useState(null);
   if (success) {
   setTimeout(() => {
     setBalance((prev) => prev + 10);
@@ -208,6 +209,29 @@ const handleFetchMatches = async () => {
       {match && match.status === "disputed" && (
         <p>Match Disputed — Admin Review</p>
       )}
+      {matches.length > 0 && (
+  <div style={{ marginTop: "20px" }}>
+    <h3>Available Matches</h3>
+
+    {matches.map((m) => (
+      <div
+        key={m.id}
+        style={{
+          border: "1px solid #ccc",
+          padding: "10px",
+          marginBottom: "10px"
+        }}
+      >
+        <p>Bet: ${m.bet}</p>
+        <p>Status: {m.status}</p>
+
+        <button onClick={() => alert("Join coming next")}>
+          Join Match
+        </button>
+      </div>
+    ))}
+  </div>
+)}
     </div>
   );
 }
