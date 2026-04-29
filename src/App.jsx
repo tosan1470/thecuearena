@@ -177,9 +177,12 @@ const handleFetchMatches = async () => {
     <div style={{ padding: "30px", fontFamily: "Arial" }}>
       <h1>thecuearena</h1>
 
-      <h3>Balance: ${balance.toFixed(2)}</h3>
-      <button onClick={handleDeposit}>Deposit $10</button>
-      <button onClick={handleFetchMatches}>Fetch Matches</button>
+<h3>Balance: ${balance.toFixed(2)}</h3>
+
+<button onClick={handleDeposit}>Deposit $10</button>
+<button onClick={handleFetchMatches}>Fetch Matches</button>
+
+<h3>Matches Count: {matches.length}</h3>
 
      <div style={{ marginTop: "20px" }}>
           <input
@@ -226,8 +229,11 @@ const handleFetchMatches = async () => {
         <p>Match Disputed — Admin Review</p>
       )}
   <div style={{ marginTop: "20px" }}>
-    <h3>Available Matches</h3>
+  <h3>Available Matches</h3>
 
+  {matches.length === 0 ? (
+    <p>No matches yet</p>
+  ) : (
     {matches.map((m) => (
       <div
         key={m.id}
@@ -242,10 +248,11 @@ const handleFetchMatches = async () => {
 
         <button onClick={() => alert("Join coming next")}>
           Join Match
-        </button>
+       </button>
       </div>
-    ))}
-  </div>
+     ))
+  )}
+</div>
     </div>
   );
 }
