@@ -228,13 +228,13 @@ const handleFetchMatches = async () => {
       {match && match.status === "disputed" && (
         <p>Match Disputed — Admin Review</p>
       )}
-  <div style={{ marginTop: "20px" }}>
+<div style={{ marginTop: "20px" }}>
   <h3>Available Matches</h3>
 
   {matches.length === 0 ? (
     <p>No matches yet</p>
   ) : (
-    {matches.map((m) => (
+    matches.map((m) => (
       <div
         key={m.id}
         style={{
@@ -248,9 +248,9 @@ const handleFetchMatches = async () => {
 
         <button onClick={() => alert("Join coming next")}>
           Join Match
-       </button>
+        </button>
       </div>
-     ))
+    ))
   )}
 </div>
     </div>
