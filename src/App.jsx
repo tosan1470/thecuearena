@@ -247,7 +247,9 @@ const handleFetchMatches = async () => {
   {matches.length === 0 ? (
     <p>No matches yet</p>
   ) : (
-    matches.map((m) => (
+    matches
+  .filter(m => m.id !== match?.id)
+  .map((m) => (
       <div
         key={m.id}
         style={{
