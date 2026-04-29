@@ -207,7 +207,6 @@ const handleFetchMatches = async () => {
       {match && match.status === "disputed" && (
         <p>Match Disputed — Admin Review</p>
       )}
-{matches.length > 0 && (
   <div style={{ marginTop: "20px" }}>
     <h3>Available Matches</h3>
 
@@ -229,7 +228,6 @@ const handleFetchMatches = async () => {
       </div>
     ))}
   </div>
-)}
     </div>
   );
 }
