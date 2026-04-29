@@ -259,7 +259,7 @@ const handleFetchMatches = async () => {
         <p>Bet: ${m.bet}</p>
         <p>Status: {m.status}</p>
 
-        <button onClick={() => alert("Join coming next")}>
+        <button onClick={() => handleJoinMatch(m.id, m.bet)}>
           Join Match
         </button>
       </div>
