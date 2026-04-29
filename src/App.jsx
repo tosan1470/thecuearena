@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
 export default function App() {
@@ -9,6 +9,25 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState(false);
 const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
+  useEffect(() => {
+  const loadMatches = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "matches"));
+
+      const matchesList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log("Auto Matches:", matchesList);
+      setMatches(matchesList);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  loadMatches();
+}, []);
   if (success) {
   setTimeout(() => {
     setBalance((prev) => prev + 10);
@@ -149,7 +168,6 @@ const handleFetchMatches = async () => {
 
     console.log("Matches:", matchesList);
     setMatches(matchesList);
-    alert("Check console for matches");
   } catch (err) {
     console.error(err);
     alert("Error fetching matches");
