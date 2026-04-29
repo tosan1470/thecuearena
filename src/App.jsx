@@ -163,7 +163,6 @@ const handleFetchMatches = async () => {
       <button onClick={handleDeposit}>Deposit $10</button>
       <button onClick={handleFetchMatches}>Fetch Matches</button>
 
-     {(
      <div style={{ marginTop: "20px" }}>
           <input
             type="number"
@@ -173,7 +172,6 @@ const handleFetchMatches = async () => {
           />
           <button onClick={handleCreateMatch}>Create Match</button>
         </div>
-      )}
 
       {match && match.status === "waiting" && (
         <div>
@@ -209,8 +207,8 @@ const handleFetchMatches = async () => {
       {match && match.status === "disputed" && (
         <p>Match Disputed — Admin Review</p>
       )}
-{
-<div style={{ marginTop: "20px" }}>
+{matches.length > 0 && (
+  <div style={{ marginTop: "20px" }}>
     <h3>Available Matches</h3>
 
     {matches.map((m) => (
