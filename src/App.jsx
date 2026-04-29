@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
 export default function App() {
   const query = new URLSearchParams(window.location.search);
