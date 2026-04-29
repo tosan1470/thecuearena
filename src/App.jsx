@@ -84,22 +84,35 @@ const handleCreateMatch = async () => {
     alert("Error creating match");
   }
 };
-const handleJoinMatch = () => {
-  const entryFee = 1;
-
-  if (balance < entryFee) {
+const handleJoinMatch = async (matchId, bet) => {
+  if (balance < bet) {
     alert("Insufficient balance");
     return;
   }
 
-  setBalance((prev) => prev - entryFee);
+  try {
+    const matchRef = doc(db, "matches", matchId);
 
-  setMatch({
-    bet: entryFee,
-    status: "playing",
-  });
+    await updateDoc(matchRef, {
+      status: "playing",
+      opponentJoined: true
+    });
 
-  alert("Match joined! Game starting...");
+    setBalance((prev) => prev - bet);
+
+    setMatch({
+      id: matchId,
+      bet,
+      status: "playing"
+    });
+
+    await handleFetchMatches();
+
+    alert("Joined match! Game starting...");
+  } catch (err) {
+    console.error(err);
+    alert("Error joining match");
+  }
 };
 const handleSubmitWin = () => {
   const totalPool = 2;
