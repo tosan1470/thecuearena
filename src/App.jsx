@@ -180,7 +180,10 @@ const handleFetchMatches = async () => {
     }));
 
     console.log("Matches:", matchesList);
+
     setMatches(matchesList);
+
+    alert("Matches loaded: " + matchesList.length); // ✅ NEW
   } catch (err) {
     console.error(err);
     alert("Error fetching matches");
@@ -248,7 +251,7 @@ const handleFetchMatches = async () => {
     <p>No matches yet</p>
   ) : (
     matches
-  .filter(m => m.id !== match?.id)
+  .filter(m => m.status === "waiting")
   .map((m) => (
       <div
         key={m.id}
