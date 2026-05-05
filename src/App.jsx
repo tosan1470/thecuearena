@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 export default function App() {
   const query = new URLSearchParams(window.location.search);
@@ -9,25 +9,26 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState(false);
 const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
-// useEffect(() => {
-//   const loadMatches = async () => {
-//     try {
-//       const querySnapshot = await getDocs(collection(db, "matches"));
+useEffect(() => {
+  if (!match?.id) return;
 
-//       const matchesList = querySnapshot.docs.map(doc => ({
-//         id: doc.id,
-//         ...doc.data()
-//       }));
+  const matchRef = doc(db, "matches", match.id);
 
-//       console.log("Auto Matches:", matchesList);
-//       setMatches(matchesList);
-//     } catch (err) {
-//       console.error(err);
-//     }
-//   };
+  const unsubscribe = onSnapshot(matchRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
 
-//   loadMatches();
-// }, []);
+      console.log("LIVE UPDATE:", data);
+
+      setMatch({
+        id: docSnap.id,
+        ...data
+      });
+    }
+  });
+
+  return () => unsubscribe();
+}, [match?.id]);
   if (success) {
   setTimeout(() => {
     setBalance((prev) => prev + 10);
@@ -94,9 +95,9 @@ const handleJoinMatch = async (matchId, bet) => {
     const matchRef = doc(db, "matches", matchId);
 
     await updateDoc(matchRef, {
-      status: "playing",
-      opponentJoined: true
-    });
+     status: "playing",
+     player2: "joined"
+  });
 
     setBalance((prev) => prev - bet);
 
