@@ -135,12 +135,14 @@ if (autoPlay) {
 
       setMatch({
         bet: entryFee,
-        status: "playing",
+        status: "waiting",
+        player2: null
       });
 
       return prev - entryFee;
     });
   }, 1500);
+}
 } else {
   setMatch({
     status: "finished",
@@ -157,10 +159,11 @@ if (autoPlay) {
 
   setBalance((prev) => prev - entryFee);
 
-  setMatch({
-    bet: entryFee,
-    status: "playing",
-  });
+ setMatch({
+  bet: entryFee,
+  status: "waiting",
+  player2: null
+});
 
   alert("Rematch created! Waiting for opponent...");
 };
