@@ -66,18 +66,19 @@ const handleCreateMatch = async () => {
       bet: entryFee,
       status: "waiting",
       createdAt: Date.now(),
+      player1: "player1",
+      player2: null
     });
 
-    const matchData = {
+    setBalance((prev) => prev - entryFee);
+
+    setMatch({
       id: docRef.id,
       bet: entryFee,
       status: "waiting",
-    };
-
-    console.log("MATCH SAVED:", matchData);
-
-    setBalance((prev) => prev - entryFee);
-    setMatch(matchData);
+      player1: "player1",
+      player2: null
+    });
 
     alert("Match created!");
   } catch (err) {
@@ -95,19 +96,18 @@ const handleJoinMatch = async (matchId, bet) => {
     const matchRef = doc(db, "matches", matchId);
 
     await updateDoc(matchRef, {
-     status: "playing",
-     player2: "joined"
-  });
+      status: "playing",
+      player2: "joined"
+    });
 
     setBalance((prev) => prev - bet);
 
     setMatch({
       id: matchId,
       bet,
-      status: "playing"
+      status: "playing",
+      player2: "joined"
     });
-
-    await handleFetchMatches();
 
     alert("Joined match! Game starting...");
   } catch (err) {
@@ -218,7 +218,7 @@ const handleFetchMatches = async () => {
         </div>
       )}
 
-      {match && match.status === "playing" && (
+      {match && match.status === "playing" && match.player2 === "joined" && (
         <div>
           <p>Game Started</p>
           <button onClick={handleSubmitWin}>Submit Win</button>
