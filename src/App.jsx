@@ -15,11 +15,21 @@ useEffect(() => {
   const matchRef = doc(db, "matches", match.id);
 
   const unsubscribe = onSnapshot(matchRef, (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
+    if (!docSnap.exists()) return;
 
-      console.log("LIVE UPDATE:", data);
+    const data = docSnap.data();
 
+    console.log("LIVE UPDATE:", data);
+
+    // Only allow valid updates
+    if (data.status === "waiting") {
+      setMatch({
+        id: docSnap.id,
+        ...data
+      });
+    }
+
+    if (data.status === "playing" && data.player2 === "joined") {
       setMatch({
         id: docSnap.id,
         ...data
@@ -122,32 +132,36 @@ const handleSubmitWin = () => {
 
   setBalance((prev) => prev + winnings);
 
-alert("You won! $" + winnings.toFixed(2) + (autoPlay ? " — Next match starting..." : ""));
-if (autoPlay) {
-  setTimeout(() => {
-    const entryFee = 1;
+  alert(
+    "You won! $" +
+      winnings.toFixed(2) +
+      (autoPlay ? " — Next match starting..." : "")
+  );
 
-    setBalance((prev) => {
-      if (prev < entryFee) {
-        setMatch({ status: "finished" });
-        return prev;
-      }
+  if (autoPlay) {
+    setTimeout(() => {
+      const entryFee = 1;
 
-      setMatch({
-        bet: entryFee,
-        status: "waiting",
-        player2: null
+      setBalance((prev) => {
+        if (prev < entryFee) {
+          setMatch({ status: "finished" });
+          return prev;
+        }
+
+        setMatch({
+          bet: entryFee,
+          status: "waiting",
+          player2: null,
+        });
+
+        return prev - entryFee;
       });
-
-      return prev - entryFee;
+    }, 1500);
+  } else {
+    setMatch({
+      status: "finished",
     });
-  }, 1500);
-}
-} else {
-  setMatch({
-    status: "finished",
-  });
-}
+  }
 };
   const handleRematch = () => {
   const entryFee = 1;
