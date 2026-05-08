@@ -9,6 +9,7 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState(false);
 const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
+  const [isCreator, setIsCreator] = useState(false);
 useEffect(() => {
   if (!match?.id) return;
 
@@ -21,22 +22,20 @@ useEffect(() => {
 
     console.log("LIVE UPDATE:", data);
 
-    // Only allow valid updates
     if (data.status === "waiting") {
       setMatch({
         id: docSnap.id,
         ...data
       });
+      return;
     }
 
-   if (data.status === "playing" && data.player2 === "joined") {
-  setHasOpponent(true);
-
-  setMatch({
-    id: docSnap.id,
-    ...data
-  });
-}
+    if (data.status === "playing" && data.player2 === "joined") {
+      setMatch({
+        id: docSnap.id,
+        ...data
+      });
+    }
   });
 
   return () => unsubscribe();
@@ -91,7 +90,7 @@ const handleCreateMatch = async () => {
       player1: "player1",
       player2: null
     });
-
+    setIsCreator(true);
     alert("Match created!");
   } catch (err) {
     console.error(err);
@@ -237,7 +236,7 @@ const handleFetchMatches = async () => {
         </div>
       )}
 
-      {match && match.status === "playing" && hasOpponent && (
+      {match && match.status === "playing" && match.player2 === "joined" && (
         <div>
           <p>Game Started</p>
           <button onClick={handleSubmitWin}>Submit Win</button>
