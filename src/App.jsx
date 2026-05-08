@@ -29,12 +29,14 @@ useEffect(() => {
       });
     }
 
-    if (data.status === "playing" && data.player2 === "joined") {
-      setMatch({
-        id: docSnap.id,
-        ...data
-      });
-    }
+   if (data.status === "playing" && data.player2 === "joined") {
+  setHasOpponent(true);
+
+  setMatch({
+    id: docSnap.id,
+    ...data
+  });
+}
   });
 
   return () => unsubscribe();
@@ -235,7 +237,7 @@ const handleFetchMatches = async () => {
         </div>
       )}
 
-      {match && match.status === "playing" && match.player2 === "joined" && (
+      {match && match.status === "playing" && hasOpponent && (
         <div>
           <p>Game Started</p>
           <button onClick={handleSubmitWin}>Submit Win</button>
