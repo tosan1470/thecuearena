@@ -22,20 +22,10 @@ useEffect(() => {
 
     console.log("LIVE UPDATE:", data);
 
-    if (data.status === "waiting") {
-      setMatch({
-        id: docSnap.id,
-        ...data
-      });
-      return;
-    }
-
-    if (data.status === "playing" && data.player2 === "joined") {
-      setMatch({
-        id: docSnap.id,
-        ...data
-      });
-    }
+    setMatch({
+  id: docSnap.id,
+  ...data
+   });
   });
 
   return () => unsubscribe();
