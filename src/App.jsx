@@ -67,7 +67,7 @@ const handleCreateMatch = async () => {
       bet: entryFee,
       status: "waiting",
       createdAt: Date.now(),
-      player1: "player1",
+      player1: userId,
       player2: null
     });
 
