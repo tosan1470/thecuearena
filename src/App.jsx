@@ -225,7 +225,7 @@ const handleFetchMatches = async () => {
         </div>
       )}
 
-      {match && match.status === "playing" && match.player2 === "joined" && (
+      {match && match.status === "playing" && match.player2 && match.player1 !== match.player2 && (
         <div>
           <p>Game Started</p>
           <button onClick={handleSubmitWin}>Submit Win</button>
