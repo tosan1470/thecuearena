@@ -97,19 +97,18 @@ const handleJoinMatch = async (matchId, bet) => {
     const matchRef = doc(db, "matches", matchId);
 
     await updateDoc(matchRef, {
-      status: "playing",
-      player2: "joined"
-    });
+     status: "playing",
+     player2: userId
+  });
 
     setBalance((prev) => prev - bet);
 
     setMatch({
-      id: matchId,
-      bet,
-      status: "playing",
-      player2: "joined"
-    });
-
+  id: matchId,
+  bet,
+  status: "playing",
+  player2: userId
+});
     alert("Joined match! Game starting...");
   } catch (err) {
     console.error(err);
