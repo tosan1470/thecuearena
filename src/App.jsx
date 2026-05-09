@@ -77,7 +77,7 @@ const handleCreateMatch = async () => {
       id: docRef.id,
       bet: entryFee,
       status: "waiting",
-      player1: "player1",
+      player1: userId,
       player2: null
     });
     setIsCreator(true);
