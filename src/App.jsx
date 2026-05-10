@@ -272,7 +272,11 @@ const handleFetchMatches = async () => {
     <p>No matches yet</p>
   ) : (
     matches
-  .filter(m => m.status === "waiting")
+  .filter(
+  m =>
+    m.status === "waiting" &&
+    m.player1 !== userId
+)
   .map((m) => (
       <div
         key={m.id}
