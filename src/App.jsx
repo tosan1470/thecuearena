@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
+const userId =
+  localStorage.getItem("userId") ||
+  Math.random().toString(36).substring(7);
+
+localStorage.setItem("userId", userId);
 export default function App() {
   const query = new URLSearchParams(window.location.search);
   const success = query.get("success");
@@ -10,7 +15,7 @@ export default function App() {
 const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
   const [isCreator, setIsCreator] = useState(false);
-useEffect(() => {
+  useEffect(() => {
   if (!match?.id) return;
 
   const matchRef = doc(db, "matches", match.id);
@@ -23,13 +28,14 @@ useEffect(() => {
     console.log("LIVE UPDATE:", data);
 
     setMatch({
-  id: docSnap.id,
-  ...data
-   });
+      id: docSnap.id,
+      ...data
+    });
   });
 
   return () => unsubscribe();
 }, [match?.id]);
+
   if (success) {
   setTimeout(() => {
     setBalance((prev) => prev + 10);
