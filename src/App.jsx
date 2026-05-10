@@ -101,6 +101,13 @@ const handleJoinMatch = async (matchId, bet) => {
 
   try {
     const matchRef = doc(db, "matches", matchId);
+   
+    const selectedMatch = matches.find(m => m.id === matchId);
+
+if (selectedMatch.player1 === userId) {
+  alert("You cannot join your own match");
+  return;
+}
 
     await updateDoc(matchRef, {
      status: "playing",
