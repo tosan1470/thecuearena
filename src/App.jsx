@@ -27,11 +27,25 @@ const [matches, setMatches] = useState([]);
 
     console.log("LIVE UPDATE:", data);
 
-    setMatch({
-      id: docSnap.id,
-      ...data
-    });
-  });
+   const data = docSnap.data();
+
+console.log("LIVE UPDATE:", data);
+
+const updatedMatch = {
+  id: docSnap.id,
+  ...data
+};
+
+setMatch(updatedMatch);
+
+if (
+  updatedMatch.status === "playing" ||
+  updatedMatch.status === "waiting"
+) {
+  setIsInGame(true);
+} else {
+  setIsInGame(false);
+}
 
   return () => unsubscribe();
 }, [match?.id]);
