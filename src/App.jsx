@@ -95,6 +95,7 @@ const handleCreateMatch = async () => {
       bet: entryFee,
       status: "waiting",
       createdAt: Date.now(),
+      expiresAt: Date.now() + 1000 * 60 * 5,
       player1: userId,
       player2: null
     });
@@ -290,7 +291,8 @@ const handleFetchMatches = async () => {
   .filter(
   m =>
     m.status === "waiting" &&
-    m.player1 !== userId
+    m.player1 !== userId &&
+    m.expiresAt > Date.now()
 )
   .map((m) => (
       <div
