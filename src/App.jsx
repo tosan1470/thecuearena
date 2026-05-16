@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from "firebase/firestore";
-import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc,
+  onSnapshot,
+  deleteDoc
+} from "firebase/firestore";import { db } from "./firebase";
 const userId =
   localStorage.getItem("userId") ||
   Math.random().toString(36).substring(7);
@@ -48,14 +55,17 @@ useEffect(() => {
   return () => unsubscribe();
 }, [match?.id]);
 
+ useEffect(() => {
   if (success) {
-  setTimeout(() => {
-    setBalance((prev) => prev + 10);
-    alert("Payment successful! $10 added to balance");
+    setTimeout(() => {
+      setBalance((prev) => prev + 10);
 
-    window.history.replaceState({}, document.title, "/");
-  }, 500);
-}
+      alert("Payment successful! $10 added to balance");
+
+      window.history.replaceState({}, document.title, "/");
+    }, 500);
+  }
+}, [success]);
 
 const handleDeposit = async () => {
   alert("clicked");
@@ -140,42 +150,30 @@ if (selectedMatch.player1 === userId) {
     alert("Error joining match");
   }
 };
-const handleSubmitWin = () => {
-  const totalPool = 2;
-  const platformFee = totalPool * 0.1;
-  const winnings = totalPool - platformFee;
+const handleSubmitWin = async () => {
+  if (!match) return;
 
-  setBalance((prev) => prev + winnings);
+  try {
+    const totalPool = 2;
+    const platformFee = totalPool * 0.1;
+    const winnings = totalPool - platformFee;
 
-  alert(
-    "You won! $" +
-      winnings.toFixed(2) +
-      (autoPlay ? " — Next match starting..." : "")
-  );
+    setBalance((prev) => prev + winnings);
 
-  if (autoPlay) {
-    setTimeout(() => {
-      const entryFee = 1;
+    const matchRef = doc(db, "matches", match.id);
 
-      setBalance((prev) => {
-        if (prev < entryFee) {
-          setMatch({ status: "finished" });
-          return prev;
-        }
+    await deleteDoc(matchRef);
 
-        setMatch({
-          bet: entryFee,
-          status: "waiting",
-          player2: null,
-        });
-
-        return prev - entryFee;
-      });
-    }, 1500);
-  } else {
     setMatch({
-      status: "finished",
+      status: "finished"
     });
+
+    setIsInGame(false);
+
+    alert("You won! $" + winnings.toFixed(2));
+  } catch (error) {
+    console.error(error);
+    alert("Error submitting win");
   }
 };
   const handleRematch = () => {
@@ -240,7 +238,12 @@ const handleFetchMatches = async () => {
             value={bet}
             onChange={(e) => setBet(e.target.value)}
           />
-          <button onClick={handleCreateMatch}>Create Match</button>
+          <button
+  onClick={handleCreateMatch}
+  disabled={isInGame}
+>
+  {isInGame ? "Already In Match" : "Create Match"}
+</button>
         </div>
 
       {match && match.status === "waiting" && (
@@ -301,9 +304,12 @@ const handleFetchMatches = async () => {
         <p>Bet: ${m.bet}</p>
         <p>Status: {m.status}</p>
 
-        <button onClick={() => handleJoinMatch(m.id, m.bet)}>
-          Join Match
-        </button>
+        <button
+  onClick={() => handleJoinMatch(m.id, m.bet)}
+  disabled={isInGame}
+>
+  {isInGame ? "In Match" : "Join Match"}
+</button>
       </div>
     ))
   )}
