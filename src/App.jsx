@@ -13,6 +13,8 @@ const userId =
   Math.random().toString(36).substring(7);
 
 localStorage.setItem("userId", userId);
+const savedUsername =
+  localStorage.getItem("username") || "";
 export default function App() {
   const query = new URLSearchParams(window.location.search);
   const success = query.get("success");
@@ -23,6 +25,7 @@ const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
   const [isInGame, setIsInGame] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
+  const [username, setUsername] = useState(savedUsername);
 useEffect(() => {
   if (!match?.id) return;
 
@@ -97,6 +100,7 @@ const handleCreateMatch = async () => {
       createdAt: Date.now(),
       expiresAt: Date.now() + 1000 * 60 * 5,
       player1: userId,
+      player1Name: username || "Anonymous",
       player2: null
     });
 
@@ -133,10 +137,10 @@ if (selectedMatch.player1 === userId) {
 }
 
     await updateDoc(matchRef, {
-     status: "playing",
-     player2: userId
-  });
-
+  status: "playing",
+  player2: userId,
+  player2Name: username || "Anonymous"
+});
     setBalance((prev) => prev - bet);
 
     setMatch({
@@ -224,6 +228,17 @@ const handleFetchMatches = async () => {
   return (
     <div style={{ padding: "30px", fontFamily: "Arial" }}>
       <h1>thecuearena</h1>
+      <div style={{ marginBottom: "20px" }}>
+  <input
+    type="text"
+    placeholder="Enter username"
+    value={username}
+    onChange={(e) => {
+      setUsername(e.target.value);
+      localStorage.setItem("username", e.target.value);
+    }}
+  />
+</div>
 
 <h3>Balance: ${balance.toFixed(2)}</h3>
 
@@ -305,6 +320,7 @@ const handleFetchMatches = async () => {
       >
         <p>Bet: ${m.bet}</p>
         <p>Status: {m.status}</p>
+        <p>Player: {m.player1Name}</p>
 
         <button
   onClick={() => handleJoinMatch(m.id, m.bet)}
