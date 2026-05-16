@@ -14,8 +14,9 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState(false);
 const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
+  const [isInGame, setIsInGame] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
-  useEffect(() => {
+useEffect(() => {
   if (!match?.id) return;
 
   const matchRef = doc(db, "matches", match.id);
@@ -27,25 +28,22 @@ const [matches, setMatches] = useState([]);
 
     console.log("LIVE UPDATE:", data);
 
-   const data = docSnap.data();
+    const updatedMatch = {
+      id: docSnap.id,
+      ...data
+    };
 
-console.log("LIVE UPDATE:", data);
+    setMatch(updatedMatch);
 
-const updatedMatch = {
-  id: docSnap.id,
-  ...data
-};
-
-setMatch(updatedMatch);
-
-if (
-  updatedMatch.status === "playing" ||
-  updatedMatch.status === "waiting"
-) {
-  setIsInGame(true);
-} else {
-  setIsInGame(false);
-}
+    if (
+      updatedMatch.status === "playing" ||
+      updatedMatch.status === "waiting"
+    ) {
+      setIsInGame(true);
+    } else {
+      setIsInGame(false);
+    }
+  });
 
   return () => unsubscribe();
 }, [match?.id]);
