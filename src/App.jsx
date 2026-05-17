@@ -271,7 +271,12 @@ const handleFetchMatches = async () => {
 
       {match && match.status === "playing" && match.player2 && match.player1 !== match.player2 && (
         <div>
-          <p>Game Started</p>
+          <p>
+  Game Started:{" "}
+  {match.player1 === userId
+    ? match.player2Name
+    : match.player1Name}
+</p>
           <button onClick={handleSubmitWin}>Submit Win</button>
         </div>
       )}
