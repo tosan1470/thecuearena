@@ -27,6 +27,7 @@ const [matches, setMatches] = useState([]);
   const [isInGame, setIsInGame] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [username, setUsername] = useState(savedUsername);
+  const [onlinePlayers, setOnlinePlayers] = useState(0);
 useEffect(() => {
   if (!match?.id) return;
 
@@ -219,6 +220,14 @@ const handleFetchMatches = async () => {
     console.log("Matches:", matchesList);
 
     setMatches(matchesList);
+    const uniquePlayers = new Set();
+
+matchesList.forEach((m) => {
+  if (m.player1) uniquePlayers.add(m.player1);
+  if (m.player2) uniquePlayers.add(m.player2);
+});
+
+setOnlinePlayers(uniquePlayers.size);
 
     alert("Matches loaded: " + matchesList.length); // ✅ NEW
   } catch (err) {
@@ -424,7 +433,7 @@ const handleFetchMatches = async () => {
       fontWeight: "bold"
     }}
   >
-    ● LIVE PLAYERS
+    ● LIVE PLAYERS: {onlinePlayers}
   </div>
 </div>
 
