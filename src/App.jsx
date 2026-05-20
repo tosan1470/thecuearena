@@ -584,6 +584,21 @@ onMouseLeave={(e) => {
 
         <button
   onClick={() => handleJoinMatch(m.id, m.bet)}
+  onMouseEnter={(e) => {
+  if (!isInGame) {
+    e.target.style.transform = "scale(1.05)";
+    e.target.style.boxShadow =
+      "0 0 25px rgba(34,197,94,0.9)";
+  }
+}}
+
+onMouseLeave={(e) => {
+  if (!isInGame) {
+    e.target.style.transform = "scale(1)";
+    e.target.style.boxShadow =
+      "0 0 15px rgba(34,197,94,0.5)";
+  }
+}}        
   disabled={isInGame}
   style={{
     background: isInGame ? "#475569" : "#22c55e",
@@ -593,6 +608,8 @@ onMouseLeave={(e) => {
     color: "white",
     fontWeight: "bold",
     cursor: "pointer",
+    transition: "all 0.3s ease",
+    transform: "scale(1)",
     marginTop: "10px",
     width: "100%",
     boxShadow: isInGame
