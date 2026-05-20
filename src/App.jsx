@@ -363,7 +363,6 @@ const handleFetchMatches = async () => {
   }}
 
   style={{
-  style={{
     background: "#38bdf8",
     border: "none",
     padding: "12px 20px",
@@ -388,7 +387,7 @@ const handleFetchMatches = async () => {
     fontWeight: "bold",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    boxShadow: "0 0 15px rgba(34,197,94,0.5)"
+    boxShadow: "0 0 15px rgba(34,197,94,0.5)",
     transform: "scale(1)",
   }}
 >
