@@ -404,14 +404,35 @@ const handleFetchMatches = async () => {
       <div
         key={m.id}
         style={{
-          border: "1px solid #ccc",
-          padding: "10px",
-          marginBottom: "10px"
-        }}
+  background: "#1e293b",
+  border: "1px solid #334155",
+  padding: "20px",
+  marginBottom: "15px",
+  borderRadius: "15px",
+  boxShadow: "0 0 20px rgba(15,23,42,0.5)"
+}}
       >
         <p>Bet: ${m.bet}</p>
-        <p>Status: {m.status}</p>
-        <p>Player: {m.player1Name}</p>
+        <p
+  style={{
+    color:
+      m.status === "waiting"
+        ? "#22c55e"
+        : "#ef4444",
+    fontWeight: "bold"
+  }}
+>
+  Status: {m.status}
+</p>
+        <p
+  style={{
+    color: "#38bdf8",
+    fontWeight: "bold",
+    fontSize: "18px"
+  }}
+>
+  {m.player1Name}
+</p>
 
         <button
   onClick={() => handleJoinMatch(m.id, m.bet)}
