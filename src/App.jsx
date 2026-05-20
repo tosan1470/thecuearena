@@ -431,17 +431,33 @@ const handleFetchMatches = async () => {
 }}
       >
         <p>Bet: ${m.bet}</p>
-        <p
+        <div
   style={{
+    display: "inline-block",
+    padding: "6px 12px",
+    borderRadius: "999px",
+    background:
+      m.status === "waiting"
+        ? "rgba(34,197,94,0.2)"
+        : "rgba(239,68,68,0.2)",
     color:
       m.status === "waiting"
         ? "#22c55e"
         : "#ef4444",
-    fontWeight: "bold"
+    fontWeight: "bold",
+    marginBottom: "10px",
+    border:
+      m.status === "waiting"
+        ? "1px solid #22c55e"
+        : "1px solid #ef4444",
+    boxShadow:
+      m.status === "waiting"
+        ? "0 0 10px rgba(34,197,94,0.5)"
+        : "0 0 10px rgba(239,68,68,0.5)"
   }}
 >
-  Status: {m.status}
-</p>
+  {m.status.toUpperCase()}
+</div>
         <p
   style={{
     color: "#38bdf8",
