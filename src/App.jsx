@@ -226,7 +226,15 @@ const handleFetchMatches = async () => {
   }
 };
   return (
-    <div style={{ padding: "30px", fontFamily: "Arial" }}>
+    <div
+  style={{
+    padding: "30px",
+    fontFamily: "Arial",
+    background: "#0f172a",
+    minHeight: "100vh",
+    color: "white"
+  }}
+>
       <h1>thecuearena</h1>
       <div style={{ marginBottom: "20px" }}>
   <input
