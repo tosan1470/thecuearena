@@ -528,3 +528,5 @@ const handleFetchMatches = async () => {
 </div>
 </div>
 </>
+  );
+}
