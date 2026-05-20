@@ -416,6 +416,20 @@ const handleFetchMatches = async () => {
         <button
   onClick={() => handleJoinMatch(m.id, m.bet)}
   disabled={isInGame}
+  style={{
+    background: isInGame ? "#475569" : "#22c55e",
+    border: "none",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    color: "white",
+    fontWeight: "bold",
+    cursor: "pointer",
+    marginTop: "10px",
+    width: "100%",
+    boxShadow: isInGame
+      ? "none"
+      : "0 0 15px rgba(34,197,94,0.5)"
+  }}
 >
   {isInGame ? "In Match" : "Join Match"}
 </button>
