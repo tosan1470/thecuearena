@@ -258,7 +258,33 @@ const handleFetchMatches = async () => {
   />
 </div>
 
-<h3>Balance: ${balance.toFixed(2)}</h3>
+<div
+  style={{
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "15px",
+    marginBottom: "20px",
+    boxShadow: "0 0 15px rgba(56,189,248,0.3)"
+  }}
+>
+  <h2
+    style={{
+      color: "#38bdf8",
+      margin: 0
+    }}
+  >
+    Wallet Balance
+  </h2>
+
+  <h1
+    style={{
+      marginTop: "10px",
+      fontSize: "36px"
+    }}
+  >
+    ${balance.toFixed(2)}
+  </h1>
+</div>
 
 <button onClick={handleDeposit}>Deposit $10</button>
 <button onClick={handleFetchMatches}>Fetch Matches</button>
