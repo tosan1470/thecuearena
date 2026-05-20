@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import logo from "./assets/logo.png";
 import {
   collection,
   addDoc,
@@ -241,15 +242,34 @@ const handleFetchMatches = async () => {
       zIndex: 1000
     }}
   >
-    <h2
-      style={{
-        color: "#38bdf8",
-        margin: 0,
-        textShadow: "0 0 10px #38bdf8"
-      }}
-    >
-      thecuearena
-    </h2>
+    <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "12px"
+  }}
+>
+  <img
+    src={logo}
+    alt="thecuearena"
+    style={{
+      width: "55px",
+      height: "55px",
+      borderRadius: "12px",
+      boxShadow: "0 0 15px rgba(234,179,8,0.6)"
+    }}
+  />
+
+  <h2
+    style={{
+      color: "#38bdf8",
+      margin: 0,
+      textShadow: "0 0 10px #38bdf8"
+    }}
+  >
+    thecuearena
+  </h2>
+</div>
 
     <div
       style={{
