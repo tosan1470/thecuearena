@@ -330,6 +330,19 @@ const handleFetchMatches = async () => {
           <button
   onClick={handleCreateMatch}
   disabled={isInGame}
+  style={{
+    background: isInGame ? "#475569" : "#f59e0b",
+    border: "none",
+    padding: "14px 24px",
+    borderRadius: "12px",
+    color: "white",
+    fontWeight: "bold",
+    cursor: "pointer",
+    marginTop: "10px",
+    boxShadow: isInGame
+      ? "none"
+      : "0 0 20px rgba(245,158,11,0.5)"
+  }}
 >
   {isInGame ? "Already In Match" : "Create Match"}
 </button>
