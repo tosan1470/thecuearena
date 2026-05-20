@@ -228,7 +228,7 @@ const handleFetchMatches = async () => {
   return (
     <div
   style={{
-    padding: "30px",
+    padding: window.innerWidth < 768 ? "15px" : "30px",
     fontFamily: "Arial",
     background: "#0f172a",
     minHeight: "100vh",
@@ -237,7 +237,7 @@ const handleFetchMatches = async () => {
 >
       <h1
   style={{
-    fontSize: "42px",
+    fontSize: window.innerWidth < 768 ? "32px" : "42px",
     fontWeight: "bold",
     color: "#38bdf8",
     marginBottom: "20px",
@@ -250,6 +250,7 @@ const handleFetchMatches = async () => {
   <input
     type="text"
     style={{
+   width: window.innerWidth < 768 ? "100%" : "250px",   
   padding: "12px",
   borderRadius: "10px",
   border: "1px solid #334155",
@@ -287,7 +288,7 @@ const handleFetchMatches = async () => {
   <h1
     style={{
       marginTop: "10px",
-      fontSize: "36px"
+      fontSize: window.innerWidth < 768 ? "28px" : "36px"
     }}
   >
     ${balance.toFixed(2)}
@@ -331,6 +332,15 @@ const handleFetchMatches = async () => {
      <div style={{ marginTop: "20px" }}>
           <input
             type="number"
+            style={{
+            width: window.innerWidth < 768 ? "100%" : "250px",
+            padding: "12px",
+            borderRadius: "10px",
+            border: "1px solid #334155",
+            background: "#1e293b",
+            color: "white",
+            marginRight: "10px"
+           }}
             placeholder="Enter bet ($1 min)"
             value={bet}
             onChange={(e) => setBet(e.target.value)}
