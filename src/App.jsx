@@ -235,7 +235,17 @@ const handleFetchMatches = async () => {
     color: "white"
   }}
 >
-      <h1>thecuearena</h1>
+      <h1
+  style={{
+    fontSize: "42px",
+    fontWeight: "bold",
+    color: "#38bdf8",
+    marginBottom: "20px",
+    textShadow: "0 0 20px #38bdf8"
+  }}
+>
+  thecuearena
+</h1>
       <div style={{ marginBottom: "20px" }}>
   <input
     type="text"
