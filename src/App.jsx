@@ -361,7 +361,39 @@ const handleFetchMatches = async () => {
   Fetch Matches
 </button>
 
-<h3>Matches Count: {matches.length}</h3>
+<div
+  style={{
+    marginTop: "15px",
+    marginBottom: "20px",
+    display: "flex",
+    gap: "20px",
+    flexWrap: "wrap"
+  }}
+>
+  <div
+    style={{
+      background: "#1e293b",
+      padding: "12px 20px",
+      borderRadius: "12px",
+      border: "1px solid #334155"
+    }}
+  >
+    🎮 Matches: {matches.length}
+  </div>
+
+  <div
+    style={{
+      background: "#1e293b",
+      padding: "12px 20px",
+      borderRadius: "12px",
+      border: "1px solid #334155",
+      color: "#22c55e",
+      fontWeight: "bold"
+    }}
+  >
+    ● LIVE PLAYERS
+  </div>
+</div>
 
      <div style={{ marginTop: "20px" }}>
           <input
