@@ -446,6 +446,21 @@ const handleFetchMatches = async () => {
           />
           <button
   onClick={handleCreateMatch}
+  onMouseEnter={(e) => {
+  if (!isInGame) {
+    e.target.style.transform = "scale(1.05)";
+    e.target.style.boxShadow =
+      "0 0 30px rgba(245,158,11,0.9)";
+  }
+}}
+
+onMouseLeave={(e) => {
+  if (!isInGame) {
+    e.target.style.transform = "scale(1)";
+    e.target.style.boxShadow =
+      "0 0 20px rgba(245,158,11,0.5)";
+  }
+}}          
   disabled={isInGame}
   style={{
     background: isInGame ? "#475569" : "#f59e0b",
