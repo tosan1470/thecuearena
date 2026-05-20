@@ -249,6 +249,14 @@ const handleFetchMatches = async () => {
       <div style={{ marginBottom: "20px" }}>
   <input
     type="text"
+    style={{
+  padding: "12px",
+  borderRadius: "10px",
+  border: "1px solid #334155",
+  background: "#1e293b",
+  color: "white",
+  marginRight: "10px"
+}}
     placeholder="Enter username"
     value={username}
     onChange={(e) => {
