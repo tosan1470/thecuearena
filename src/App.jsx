@@ -286,8 +286,37 @@ const handleFetchMatches = async () => {
   </h1>
 </div>
 
-<button onClick={handleDeposit}>Deposit $10</button>
-<button onClick={handleFetchMatches}>Fetch Matches</button>
+<button
+  onClick={handleDeposit}
+  style={{
+    background: "#38bdf8",
+    border: "none",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    color: "white",
+    fontWeight: "bold",
+    cursor: "pointer",
+    marginRight: "10px",
+    boxShadow: "0 0 15px rgba(56,189,248,0.5)"
+  }}
+>
+  Deposit $10
+</button>
+<button
+  onClick={handleFetchMatches}
+  style={{
+    background: "#22c55e",
+    border: "none",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    color: "white",
+    fontWeight: "bold",
+    cursor: "pointer",
+    boxShadow: "0 0 15px rgba(34,197,94,0.5)"
+  }}
+>
+  Fetch Matches
+</button>
 
 <h3>Matches Count: {matches.length}</h3>
 
