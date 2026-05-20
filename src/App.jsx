@@ -259,39 +259,6 @@ const handleFetchMatches = async () => {
     >
       ● LIVE
     </div>
-  </div><>
-  <div
-    style={{
-      width: "100%",
-      padding: "15px 30px",
-      background: "#111827",
-      borderBottom: "1px solid #1e293b",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      position: "sticky",
-      top: 0,
-      zIndex: 1000
-    }}
-  >
-    <h2
-      style={{
-        color: "#38bdf8",
-        margin: 0,
-        textShadow: "0 0 10px #38bdf8"
-      }}
-    >
-      thecuearena
-    </h2>
-
-    <div
-      style={{
-        color: "#22c55e",
-        fontWeight: "bold"
-      }}
-    >
-      ● LIVE
-    </div>
   </div>
     <div
   style={{
@@ -556,9 +523,8 @@ const handleFetchMatches = async () => {
   {isInGame ? "In Match" : "Join Match"}
 </button>
       </div>
-    ))
+       ))
   )}
 </div>
-    </div>
-  );
-}
+</div>
+</>
