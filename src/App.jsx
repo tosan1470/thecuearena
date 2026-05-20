@@ -351,6 +351,18 @@ const handleFetchMatches = async () => {
 
 <button
   onClick={handleDeposit}
+
+  onMouseEnter={(e) => {
+    e.target.style.transform = "scale(1.05)";
+    e.target.style.boxShadow = "0 0 25px rgba(34,197,94,0.9)";
+  }}
+
+  onMouseLeave={(e) => {
+    e.target.style.transform = "scale(1)";
+    e.target.style.boxShadow = "0 0 15px rgba(34,197,94,0.5)";
+  }}
+
+  style={{
   style={{
     background: "#38bdf8",
     border: "none",
@@ -375,7 +387,9 @@ const handleFetchMatches = async () => {
     color: "white",
     fontWeight: "bold",
     cursor: "pointer",
+    transition: "all 0.3s ease",
     boxShadow: "0 0 15px rgba(34,197,94,0.5)"
+    transform: "scale(1)",
   }}
 >
   Fetch Matches
