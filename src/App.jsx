@@ -208,7 +208,12 @@ const handleSubmitWin = async () => {
 
     setIsInGame(false);
 
-    alert("You won! $" + winnings.toFixed(2));
+    setMatch({
+  status: "finished",
+  winnings
+});
+
+setIsInGame(false);
   } catch (error) {
     console.error(error);
     alert("Error submitting win");
@@ -554,7 +559,24 @@ onMouseLeave={(e) => {
 
 {match && match.status === "finished" && (
   <div>
- <p>Game Finished</p>
+ <div
+  style={{
+    background: "#14532d",
+    border: "1px solid #22c55e",
+    padding: "20px",
+    borderRadius: "15px",
+    textAlign: "center",
+    boxShadow: "0 0 20px rgba(34,197,94,0.5)"
+  }}
+>
+  <h2 style={{ color: "#22c55e" }}>
+    🏆 Victory!
+  </h2>
+
+  <p>
+    You won ${match.winnings?.toFixed(2)}
+  </p>
+</div>
 
     <button onClick={handleRematch}>
       Rematch ($1 Entry Fee)
