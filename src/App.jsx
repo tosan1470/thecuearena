@@ -582,6 +582,19 @@ onMouseLeave={(e) => {
   }}
 >
         <p>Bet: ${m.bet}</p>
+        <p
+  style={{
+    color: "#facc15",
+    fontWeight: "bold",
+    marginTop: "5px"
+  }}
+>
+  ⏱ Expires in:{" "}
+  {Math.max(
+    0,
+    Math.floor((m.expiresAt - Date.now()) / 1000)
+  )}s
+</p>
         <div
   style={{
     display: "inline-block",
