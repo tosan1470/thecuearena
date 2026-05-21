@@ -28,6 +28,7 @@ const [matches, setMatches] = useState([]);
   const [isCreator, setIsCreator] = useState(false);
   const [username, setUsername] = useState(savedUsername);
   const [onlinePlayers, setOnlinePlayers] = useState(0);
+  const [now, setNow] = useState(Date.now());
 useEffect(() => {
   if (!match?.id) return;
 
@@ -59,7 +60,13 @@ useEffect(() => {
 
   return () => unsubscribe();
 }, [match?.id]);
+useEffect(() => {
+  const timer = setInterval(() => {
+    setNow(Date.now());
+  }, 1000);
 
+  return () => clearInterval(timer);
+}, []);
  useEffect(() => {
   if (success) {
     setTimeout(() => {
@@ -590,10 +597,17 @@ onMouseLeave={(e) => {
   }}
 >
   ⏱ Expires in:{" "}
-  {Math.max(
-    0,
-    Math.floor((m.expiresAt - Date.now()) / 1000)
-  )}s
+  {String(
+  Math.floor(
+    Math.max(0, m.expiresAt - now) / 60000
+  )
+).padStart(2, "0")}
+:
+{String(
+  Math.floor(
+    (Math.max(0, m.expiresAt - now) % 60000) / 1000
+  )
+).padStart(2, "0")}
 </p>
         <div
   style={{
