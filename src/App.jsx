@@ -387,6 +387,19 @@ setOnlinePlayers(uniquePlayers.size);
 </button>
 <button
   onClick={handleFetchMatches}
+
+  onMouseEnter={(e) => {
+    e.target.style.transform = "scale(1.05)";
+    e.target.style.boxShadow =
+      "0 0 25px rgba(34,197,94,0.9)";
+  }}
+
+  onMouseLeave={(e) => {
+    e.target.style.transform = "scale(1)";
+    e.target.style.boxShadow =
+      "0 0 15px rgba(34,197,94,0.5)";
+  }}
+
   style={{
     background: "#22c55e",
     border: "none",
