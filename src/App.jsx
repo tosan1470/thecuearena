@@ -67,6 +67,30 @@ useEffect(() => {
 
   return () => clearInterval(timer);
 }, []);
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    collection(db, "matches"),
+    (snapshot) => {
+      const matchesList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setMatches(matchesList);
+
+      const uniquePlayers = new Set();
+
+      matchesList.forEach((m) => {
+        if (m.player1) uniquePlayers.add(m.player1);
+        if (m.player2) uniquePlayers.add(m.player2);
+      });
+
+      setOnlinePlayers(uniquePlayers.size);
+    }
+  );
+
+  return () => unsubscribe();
+}, []);
  useEffect(() => {
   if (success) {
     setTimeout(() => {
