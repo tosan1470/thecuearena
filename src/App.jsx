@@ -581,15 +581,51 @@ onMouseLeave={(e) => {
 >
   {m.status.toUpperCase()}
 </div>
-        <p
+       
+  <div
   style={{
-    color: "#38bdf8",
-    fontWeight: "bold",
-    fontSize: "18px"
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginTop: "10px",
+    marginBottom: "10px"
   }}
 >
-  {m.player1Name}
-</p>
+  <div
+    style={{
+      width: "45px",
+      height: "45px",
+      borderRadius: "50%",
+      background: "#22c55e",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: "bold",
+      color: "white",
+      fontSize: "18px",
+      boxShadow: "0 0 12px rgba(34,197,94,0.5)"
+    }}
+  >
+    {m.player1Name?.charAt(0).toUpperCase()}
+  </div>
+
+ <div>
+  <p
+    style={{
+      color: "#38bdf8",
+      fontWeight: "bold",
+      fontSize: "18px",
+      margin: 0
+    }}
+  >
+    {m.player1Name}
+  </p>
+
+  <small style={{ color: "#94a3b8" }}>
+    Ready to Play
+  </small>
+</div>
+</div>
 
         <button
   onClick={() => handleJoinMatch(m.id, m.bet)}
