@@ -556,16 +556,31 @@ onMouseLeave={(e) => {
 )
   .map((m) => (
       <div
-        key={m.id}
-        style={{
-  background: "#1e293b",
-  border: "1px solid #334155",
-  padding: "20px",
-  marginBottom: "15px",
-  borderRadius: "15px",
-  boxShadow: "0 0 20px rgba(15,23,42,0.5)"
-}}
-      >
+  key={m.id}
+
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = "translateY(-3px)";
+    e.currentTarget.style.boxShadow =
+      "0 0 25px rgba(56,189,248,0.4)";
+  }}
+
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform = "translateY(0)";
+    e.currentTarget.style.boxShadow =
+      "0 0 20px rgba(15,23,42,0.5)";
+  }}
+
+  style={{
+    background: "#1e293b",
+    border: "1px solid #334155",
+    padding: "20px",
+    marginBottom: "15px",
+    borderRadius: "15px",
+    boxShadow: "0 0 20px rgba(15,23,42,0.5)",
+    transition: "all 0.3s ease",
+    transform: "translateY(0)"
+  }}
+>
         <p>Bet: ${m.bet}</p>
         <div
   style={{
