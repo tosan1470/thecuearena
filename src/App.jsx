@@ -203,12 +203,6 @@ const handleSubmitWin = async () => {
     await deleteDoc(matchRef);
 
     setMatch({
-      status: "finished"
-    });
-
-    setIsInGame(false);
-
-    setMatch({
   status: "finished",
   winnings
 });
