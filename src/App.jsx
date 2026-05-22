@@ -24,12 +24,21 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState(false);
 const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
-  const [matchHistory, setMatchHistory] = useState([]);
+  const [matchHistory, setMatchHistory] = useState(
+  JSON.parse(localStorage.getItem("matchHistory")) || []
+);
   const [isInGame, setIsInGame] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [username, setUsername] = useState(savedUsername);
   const [onlinePlayers, setOnlinePlayers] = useState(0);
   const [now, setNow] = useState(Date.now());
+ 
+  useEffect(() => {
+  localStorage.setItem(
+    "matchHistory",
+    JSON.stringify(matchHistory)
+  );
+}, [matchHistory]);
 useEffect(() => {
   if (!match?.id) return;
 
