@@ -24,6 +24,7 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState(false);
 const [matches, setMatches] = useState([]);
   const [match, setMatch] = useState(null);
+  const [matchHistory, setMatchHistory] = useState([]);
   const [isInGame, setIsInGame] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [username, setUsername] = useState(savedUsername);
@@ -201,7 +202,14 @@ const handleSubmitWin = async () => {
     const matchRef = doc(db, "matches", match.id);
 
     await deleteDoc(matchRef);
-
+   setMatchHistory((prev) => [
+  {
+    result: "WIN",
+    amount: winnings,
+    date: new Date().toLocaleTimeString()
+  },
+  ...prev
+]);
     setMatch({
   status: "finished",
   winnings
@@ -588,6 +596,40 @@ onMouseLeave={(e) => {
       {match && match.status === "disputed" && (
         <p>Match Disputed — Admin Review</p>
       )}
+<div
+    style={{
+          marginTop: "20px",
+          background: "#111827",
+          padding: "15px",
+          borderRadius: "12px"
+  }}
+>
+  <h3 style={{ color: "#22c55e" }}>
+    📜 Match History
+  </h3>
+
+  {matchHistory.length === 0 ? (
+    <p>No matches played yet</p>
+  ) : (
+    matchHistory.map((h, i) => (
+      <div
+        key={i}
+        style={{
+          marginBottom: "8px",
+          color: "#22c55e"
+        }}
+      >
+        {h.result === "WIN" ? "🏆" : "❌"} {h.result}
+{" "}
+{h.result === "WIN" ? "+" : "-"}$
+{h.amount.toFixed(2)}
+{" "}
+({h.date})
+      </div>
+    ))
+  )}
+</div>
+      
 <div style={{ marginTop: "20px" }}>
   <h3>Available Matches</h3>
 
