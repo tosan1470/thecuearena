@@ -8,7 +8,13 @@ import {
   updateDoc,
   onSnapshot,
   deleteDoc
-} from "firebase/firestore";import { db } from "./firebase";
+} from "firebase/firestore";
+import { db, auth } from "./firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut
+} from "firebase/auth";
 const userId =
   localStorage.getItem("userId") ||
   Math.random().toString(36).substring(7);
@@ -32,7 +38,11 @@ const [matches, setMatches] = useState([]);
   const [username, setUsername] = useState(savedUsername);
   const [onlinePlayers, setOnlinePlayers] = useState(0);
   const [now, setNow] = useState(Date.now());
- 
+
+  const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const [user, setUser] = useState(null);
+  
   useEffect(() => {
   localStorage.setItem(
     "matchHistory",
@@ -198,6 +208,42 @@ if (selectedMatch.player1 === userId) {
     alert("Error joining match");
   }
 };
+  const handleSignUp = async () => {
+  try {
+    const userCredential =
+      await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+    setUser(userCredential.user);
+
+    alert("Account created successfully!");
+  } catch (error) {
+    alert(error.message);
+  }
+};
+  const handleLogin = async () => {
+  try {
+    const userCredential =
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+    setUser(userCredential.user);
+
+    alert("Login successful!");
+  } catch (error) {
+    alert(error.message);
+  }
+};
+  const handleLogout = async () => {
+  await signOut(auth);
+  setUser(null);
+};
 const handleSubmitWin = async () => {
   if (!match) return;
 
@@ -356,6 +402,68 @@ setOnlinePlayers(uniquePlayers.size);
 >
   thecuearena
 </h1>
+      <div style={{ marginBottom: "10px" }}>
+  <input
+    type="email"
+    placeholder="Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    style={{
+      width: "250px",
+      padding: "12px",
+      borderRadius: "10px",
+      border: "1px solid #334155",
+      background: "#1e293b",
+      color: "white"
+    }}
+  />
+</div>
+<div style={{ marginBottom: "10px" }}>
+  <input
+    type="password"
+    placeholder="Password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    style={{
+      width: "250px",
+      padding: "12px",
+      borderRadius: "10px",
+      border: "1px solid #334155",
+      background: "#1e293b",
+      color: "white"
+    }}
+  />
+</div>      
+      <div style={{ marginBottom: "15px" }}>
+  <button
+    onClick={handleSignUp}
+    style={{
+      marginRight: "10px",
+      padding: "10px 20px",
+      borderRadius: "10px",
+      border: "none",
+      background: "#22c55e",
+      color: "white",
+      cursor: "pointer"
+    }}
+  >
+    Sign Up
+  </button>
+
+  <button
+    onClick={handleLogin}
+    style={{
+      padding: "10px 20px",
+      borderRadius: "10px",
+      border: "none",
+      background: "#38bdf8",
+      color: "white",
+      cursor: "pointer"
+    }}
+  >
+    Login
+  </button>
+</div>
       <div style={{ marginBottom: "20px" }}>
   <input
     type="text"
