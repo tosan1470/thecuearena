@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 const firebaseConfig = {
-  AIzaSyBs1co_IZv0X0uTeLQ5Rxw_JCXtVcM3BVc
+  apiKey: "AIzaSyBs1co_IZv0X0uTeLQ5Rxw_JCXtVcM3BVc",
   authDomain: "thecuearena.firebaseapp.com",
   projectId: "thecuearena",
   storageBucket: "thecuearena.firebasestorage.app",
