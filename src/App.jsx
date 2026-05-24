@@ -481,6 +481,9 @@ setOnlinePlayers(uniquePlayers.size);
     Login
   </button>
 </div>
+
+    ) : (
+    
       <div style={{ marginBottom: "20px" }}>
   <input
     type="text"
@@ -936,10 +939,12 @@ onMouseLeave={(e) => {
   {isInGame ? "In Match" : "Join Match"}
 </button>
       </div>
-       ))
   )}
 </div>
 </div>
 </>
+
+       
+  
   );
 }
