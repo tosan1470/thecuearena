@@ -41,7 +41,9 @@ const [matches, setMatches] = useState([]);
 
   const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
-const [user, setUser] = useState(null);
+const [user, setUser] = useState(
+  JSON.parse(localStorage.getItem("user")) || null
+);
   
   useEffect(() => {
   localStorage.setItem(
@@ -219,6 +221,11 @@ if (selectedMatch.player1 === userId) {
 
     setUser(userCredential.user);
 
+localStorage.setItem(
+  "user",
+  JSON.stringify(userCredential.user)
+);
+
     alert("Account created successfully!");
   } catch (error) {
     alert(error.message);
@@ -235,13 +242,21 @@ if (selectedMatch.player1 === userId) {
 
     setUser(userCredential.user);
 
+localStorage.setItem(
+  "user",
+  JSON.stringify(userCredential.user)
+);
+
     alert("Login successful!");
   } catch (error) {
     alert(error.message);
   }
 };
-  const handleLogout = async () => {
+ const handleLogout = async () => {
   await signOut(auth);
+
+  localStorage.removeItem("user");
+
   setUser(null);
 };
 const handleSubmitWin = async () => {
@@ -329,7 +344,9 @@ setOnlinePlayers(uniquePlayers.size);
   }
 };
   return (
-    <>
+  <>
+    {!user ? (
+    
   <div
     style={{
       width: "100%",
