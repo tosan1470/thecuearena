@@ -346,7 +346,7 @@ setOnlinePlayers(uniquePlayers.size);
   return (
   <>
     {!user ? (
-    
+   <> 
   <div
     style={{
       width: "100%",
@@ -398,7 +398,7 @@ setOnlinePlayers(uniquePlayers.size);
       ● LIVE
     </div>
   </div>
-    <div
+<div
   style={{
     padding: window.innerWidth < 768 ? "15px" : "30px",
     fontFamily: "Arial",
@@ -480,7 +480,7 @@ setOnlinePlayers(uniquePlayers.size);
     Login
   </button>
 </div>
-
+</>
     ) : (
     
       <div style={{ marginBottom: "20px" }}>
