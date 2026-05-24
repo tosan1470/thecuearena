@@ -378,8 +378,7 @@ setOnlinePlayers(uniquePlayers.size);
       boxShadow: "0 0 15px rgba(234,179,8,0.6)"
     }}
   />
-
-  <h2
+<h2
     style={{
       color: "#38bdf8",
       margin: 0,
@@ -938,8 +937,12 @@ onMouseLeave={(e) => {
 >
   {isInGame ? "In Match" : "Join Match"}
 </button>
-      </div>
-  )}
+</div>
+
+) : (
+  <></>
+)}
+
 </div>
 </div>
 </>
