@@ -9,7 +9,7 @@ import {
   deleteDoc,
   runTransaction,
   setDoc,
-  getDoc
+  getDoc  // used by fetchBalance
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import {
@@ -285,56 +285,59 @@ export default function App() {
     if (!match?.id) return;
     const matchRef = doc(db, "matches", match.id);
 
+    // We resolve the outcome inside the transaction so we have all the data
+    // we need before the doc might get deleted by the other player.
+    let outcome = null; // { status, winner, bet }
+
     try {
       await runTransaction(db, async (transaction) => {
         const snap = await transaction.get(matchRef);
         if (!snap.exists()) throw new Error("Match not found");
         const data = snap.data();
 
-        const existingClaim = data.winClaim ?? {};
+        // Always derive opponentId from Firestore data — never from local state
+        // (local state for the joiner is missing player1/player2 fields).
         const opponentId =
           data.player1 === userId ? data.player2 : data.player1;
+
+        const existingClaim = data.winClaim ?? {};
 
         if (result === "win") {
           if (existingClaim[opponentId] === "win") {
             // Both claim win → dispute
             transaction.update(matchRef, { status: "disputed" });
+            outcome = { status: "disputed", bet: data.bet };
           } else if (existingClaim[opponentId] === "loss") {
             // Opponent already conceded → this player wins
-            transaction.update(matchRef, {
-              status: "finished",
-              winner: userId,
-            });
+            transaction.update(matchRef, { status: "finished", winner: userId });
+            outcome = { status: "finished", winner: userId, bet: data.bet };
           } else {
             // First claim — record and wait
             transaction.update(matchRef, {
               winClaim: { ...existingClaim, [userId]: "win" },
             });
+            outcome = { status: "pending" };
           }
         } else {
           // result === "loss" — this player concedes
           if (existingClaim[opponentId] === "win") {
-            // Opponent already claimed win → confirm payout
-            transaction.update(matchRef, {
-              status: "finished",
-              winner: opponentId,
-            });
+            // Opponent already claimed win → confirm payout to opponent
+            transaction.update(matchRef, { status: "finished", winner: opponentId });
+            outcome = { status: "finished", winner: opponentId, bet: data.bet };
           } else {
             transaction.update(matchRef, {
               winClaim: { ...existingClaim, [userId]: "loss" },
             });
+            outcome = { status: "pending" };
           }
         }
       });
 
-      // Re-read to see what happened
-      const updated = await getDoc(matchRef);
-      if (!updated.exists()) return;
-      const data = updated.data();
-
-      if (data.status === "finished") {
-        const iWon = data.winner === userId;
-        const totalPool = (data.bet ?? 0) * 2;
+      // Act on the outcome we captured inside the transaction.
+      // We never re-read the doc here — it may already be deleted by the winner.
+      if (outcome.status === "finished") {
+        const iWon = outcome.winner === userId;
+        const totalPool = (outcome.bet ?? 0) * 2;
         const winnings  = totalPool * 0.9; // 10% platform fee
 
         if (iWon) {
@@ -344,16 +347,20 @@ export default function App() {
             ...prev,
           ]);
           setMatch({ status: "finished", winnings });
+          // Only the winner deletes the match doc — prevents a race where
+          // the loser deletes it first and the winner's getDoc returns nothing.
+          await deleteDoc(matchRef).catch(() => {});
         } else {
           setMatchHistory((prev) => [
-            { result: "LOSS", amount: data.bet, date: new Date().toLocaleTimeString() },
+            { result: "LOSS", amount: outcome.bet, date: new Date().toLocaleTimeString() },
             ...prev,
           ]);
           setMatch({ status: "finished", winnings: 0 });
+          // Loser does NOT delete — winner handles cleanup above.
         }
-        await deleteDoc(matchRef);
         setIsInGame(false);
-      } else if (data.status === "disputed") {
+
+      } else if (outcome.status === "disputed") {
         setMatch((m) => ({ ...m, status: "disputed" }));
         setIsInGame(false);
         alert("Both players claimed the win. The match has been flagged for admin review.");
