@@ -938,9 +938,7 @@ onMouseLeave={(e) => {
   {isInGame ? "In Match" : "Join Match"}
 </button>
 </div>
-
-) : (
-  <></>
+))
 )}
 
 </div>
