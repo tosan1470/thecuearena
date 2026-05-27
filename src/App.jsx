@@ -64,6 +64,9 @@ export default function App() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [dob, setDob] = useState("");
   const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [agreedToS, setAgreedToS]       = useState(false);
+  const [agreedPP, setAgreedPP]         = useState(false);
+  const [modalContent, setModalContent] = useState(null); // "tos" | "pp" | null
   const [user, setUser] = useState(null);
 
   const windowWidth = useWindowWidth();
@@ -486,6 +489,15 @@ export default function App() {
   };
 
   const handleSignUp = async () => {
+    // Validate agreements
+    if (!agreedToS) {
+      alert("Please agree to the Terms of Service to continue.");
+      return;
+    }
+    if (!agreedPP) {
+      alert("Please agree to the Privacy Policy to continue.");
+      return;
+    }
     // Validate password match
     if (password !== confirmPassword) {
       alert("Passwords do not match.");
@@ -723,6 +735,59 @@ export default function App() {
                     style={{ ...inputStyle, width: "100%", marginRight: 0, colorScheme: "dark" }} />
                 </div>
               </>
+            )}
+
+            {/* Agreements — sign-up only */}
+            {isSignUpMode && (
+              <div style={{ marginBottom: "16px", marginTop: "4px" }}>
+                {/* Terms of Service */}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                  <input
+                    type="checkbox"
+                    id="tos"
+                    checked={agreedToS}
+                    onChange={(e) => setAgreedToS(e.target.checked)}
+                    style={{ width: "16px", height: "16px", accentColor: "#22c55e", cursor: "pointer", flexShrink: 0 }}
+                  />
+                  <label htmlFor="tos" style={{ color: "#94a3b8", fontSize: "13px", lineHeight: 1.4 }}>
+                    I agree to the{" "}
+                    <span
+                      onClick={() => setModalContent("tos")}
+                      style={{ color: "#38bdf8", cursor: "pointer", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      Terms of Service
+                      {/* Eye icon */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </span>
+                  </label>
+                </div>
+
+                {/* Privacy Policy */}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <input
+                    type="checkbox"
+                    id="pp"
+                    checked={agreedPP}
+                    onChange={(e) => setAgreedPP(e.target.checked)}
+                    style={{ width: "16px", height: "16px", accentColor: "#22c55e", cursor: "pointer", flexShrink: 0 }}
+                  />
+                  <label htmlFor="pp" style={{ color: "#94a3b8", fontSize: "13px", lineHeight: 1.4 }}>
+                    I agree to the{" "}
+                    <span
+                      onClick={() => setModalContent("pp")}
+                      style={{ color: "#38bdf8", cursor: "pointer", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      Privacy Policy
+                      {/* Eye icon */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </span>
+                  </label>
+                </div>
+              </div>
             )}
 
             {/* Submit button */}
@@ -985,6 +1050,92 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Terms / Privacy modal */}
+      {modalContent && (
+        <div
+          onClick={() => setModalContent(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 9999, padding: "20px", boxSizing: "border-box",
+          }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#1e293b", borderRadius: "16px", padding: "28px",
+              maxWidth: "500px", width: "100%", maxHeight: "80vh",
+              overflowY: "auto", border: "1px solid #334155",
+              boxShadow: "0 0 40px rgba(56,189,248,0.2)",
+            }}>
+            {/* Modal header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h2 style={{ margin: 0, color: "#38bdf8", fontSize: "18px" }}>
+                {modalContent === "tos" ? "Terms of Service" : "Privacy Policy"}
+              </h2>
+              <button
+                onClick={() => setModalContent(null)}
+                style={{
+                  background: "transparent", border: "none", color: "#94a3b8",
+                  cursor: "pointer", fontSize: "22px", lineHeight: 1, padding: "4px 8px",
+                }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Modal body */}
+            {modalContent === "tos" ? (
+              <div style={{ color: "#cbd5e1", fontSize: "14px", lineHeight: 1.7 }}>
+                <p><strong style={{ color: "white" }}>1. Acceptance of Terms</strong><br />
+                By creating an account and using thecuearena, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform.</p>
+                <p><strong style={{ color: "white" }}>2. Eligibility</strong><br />
+                You must be at least 18 years of age to register and participate. By registering, you confirm that you meet this requirement.</p>
+                <p><strong style={{ color: "white" }}>3. Fair Play</strong><br />
+                All match results must be reported honestly. Fraudulent win claims, collusion, or any form of cheating will result in immediate account suspension and forfeiture of funds.</p>
+                <p><strong style={{ color: "white" }}>4. Wagers & Fees</strong><br />
+                A 10% platform fee is deducted from the total match pool. Entry fees are non-refundable once a match begins, except in the case of a cancelled match before an opponent joins.</p>
+                <p><strong style={{ color: "white" }}>5. Disputes</strong><br />
+                Disputed matches are reviewed by admins. Admin decisions are final. thecuearena reserves the right to withhold funds during an active review.</p>
+                <p><strong style={{ color: "white" }}>6. Account Termination</strong><br />
+                We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or abuse the platform.</p>
+                <p><strong style={{ color: "white" }}>7. Changes to Terms</strong><br />
+                These terms may be updated at any time. Continued use of the platform after changes constitutes acceptance of the new terms.</p>
+              </div>
+            ) : (
+              <div style={{ color: "#cbd5e1", fontSize: "14px", lineHeight: 1.7 }}>
+                <p><strong style={{ color: "white" }}>1. Information We Collect</strong><br />
+                We collect your email address, date of birth, username, match history, and wallet balance. We do not collect payment card details — all payments are processed securely by Stripe.</p>
+                <p><strong style={{ color: "white" }}>2. How We Use Your Information</strong><br />
+                Your data is used solely to operate the platform: authenticating your account, managing your wallet, recording match results, and enforcing fair play.</p>
+                <p><strong style={{ color: "white" }}>3. Data Storage</strong><br />
+                Your data is stored securely in Firebase (Google Cloud). We do not sell, rent, or share your personal information with third parties for marketing purposes.</p>
+                <p><strong style={{ color: "white" }}>4. Date of Birth</strong><br />
+                Your date of birth is collected to verify that you meet the minimum age requirement of 18 years. It is stored securely and is not publicly visible.</p>
+                <p><strong style={{ color: "white" }}>5. Cookies & Local Storage</strong><br />
+                We use browser local storage to remember your session and username preference. No third-party tracking cookies are used.</p>
+                <p><strong style={{ color: "white" }}>6. Your Rights</strong><br />
+                You may request deletion of your account and associated data at any time by contacting support. Upon deletion, your data will be permanently removed within 30 days.</p>
+                <p><strong style={{ color: "white" }}>7. Contact</strong><br />
+                For any privacy-related questions, please contact us through the platform's support channel.</p>
+              </div>
+            )}
+
+            {/* Agree + close button */}
+            <button
+              onClick={() => {
+                if (modalContent === "tos") setAgreedToS(true);
+                else setAgreedPP(true);
+                setModalContent(null);
+              }}
+              style={{
+                width: "100%", marginTop: "20px", padding: "12px",
+                borderRadius: "10px", border: "none", fontWeight: "bold",
+                fontSize: "14px", cursor: "pointer", background: "#22c55e",
+                color: "white", boxShadow: "0 0 15px rgba(34,197,94,0.4)",
+              }}>
+              I Agree
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
-}
