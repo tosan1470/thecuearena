@@ -1115,7 +1115,7 @@ export default function App() {
                 <p><strong style={{ color: "white" }}>6. Your Rights</strong><br />
                 You may request deletion of your account and associated data at any time by contacting support. Upon deletion, your data will be permanently removed within 30 days.</p>
                 <p><strong style={{ color: "white" }}>7. Contact</strong><br />
-                For any privacy-related questions, please contact us through the platform's support channel.</p>
+                For any privacy-related questions, please contact us through the platform&apos;s support channel.</p>
               </div>
             )}
 
@@ -1139,3 +1139,4 @@ export default function App() {
       )}
     </>
   );
+}
