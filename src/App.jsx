@@ -55,7 +55,10 @@ export default function App() {
   const [matchHistory, setMatchHistory] = useState(
     JSON.parse(localStorage.getItem("matchHistory")) || []
   );
-  const [isInGame, setIsInGame] = useState(false);
+  const [isInGame, setIsInGame]     = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput]       = useState("");
+  const chatBottomRef = useRef(null);
   const [username, setUsername] = useState(savedUsername);
   const [onlinePlayers, setOnlinePlayers] = useState(0);
   const [now, setNow]   = useState(Date.now());
@@ -226,6 +229,22 @@ export default function App() {
       setIsInGame(false);
     }
   }, [now, match]);
+
+  const handleSendChat = async () => {
+    const text = chatInput.trim();
+    if (!text || !match?.id) return;
+    setChatInput("");
+    try {
+      await addDoc(collection(db, "matches", match.id, "chat"), {
+        text,
+        senderId: userId,
+        senderName: username || "Anonymous",
+        createdAt: Date.now(),
+      });
+    } catch (err) {
+      console.error("Chat error:", err);
+    }
+  };
 
   const handleDeposit = async () => {
     try {
@@ -923,6 +942,111 @@ export default function App() {
             </div>
           )}
 
+          {/* ── Chat — visible whenever a match is active or just finished ── */}
+          {match && (match.status === "playing" || match.status === "finished" || match.status === "disputed") && (
+            <div style={{
+              marginTop: "20px", background: "#111827",
+              borderRadius: "16px", border: "1px solid #1e293b",
+              overflow: "hidden",
+            }}>
+              {/* Chat header */}
+              <div style={{
+                padding: "12px 16px", background: "#1e293b",
+                borderBottom: "1px solid #334155",
+                display: "flex", alignItems: "center", gap: "8px",
+              }}>
+                <span style={{ fontSize: "16px" }}>💬</span>
+                <span style={{ fontWeight: "bold", color: "#38bdf8", fontSize: "14px" }}>
+                  Match Chat
+                </span>
+                <span style={{
+                  marginLeft: "auto", fontSize: "11px", color: "#22c55e",
+                  background: "rgba(34,197,94,0.1)", border: "1px solid #22c55e",
+                  borderRadius: "999px", padding: "2px 8px",
+                }}>
+                  ● LIVE
+                </span>
+              </div>
+
+              {/* Messages */}
+              <div style={{
+                height: "220px", overflowY: "auto", padding: "12px 16px",
+                display: "flex", flexDirection: "column", gap: "8px",
+              }}>
+                {chatMessages.length === 0 ? (
+                  <p style={{ color: "#475569", fontSize: "13px", textAlign: "center", marginTop: "80px" }}>
+                    No messages yet. Say something!
+                  </p>
+                ) : (
+                  chatMessages.map((msg) => {
+                    const isMe = msg.senderId === userId;
+                    return (
+                      <div key={msg.id} style={{
+                        display: "flex", flexDirection: "column",
+                        alignItems: isMe ? "flex-end" : "flex-start",
+                      }}>
+                        <span style={{ fontSize: "11px", color: "#64748b", marginBottom: "3px" }}>
+                          {isMe ? "You" : msg.senderName}
+                        </span>
+                        <div style={{
+                          maxWidth: "75%", padding: "8px 12px",
+                          borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                          background: isMe ? "#1d4ed8" : "#1e293b",
+                          border: isMe ? "1px solid #3b82f6" : "1px solid #334155",
+                          color: "white", fontSize: "14px", wordBreak: "break-word",
+                          boxShadow: isMe
+                            ? "0 0 10px rgba(59,130,246,0.3)"
+                            : "0 0 10px rgba(0,0,0,0.2)",
+                        }}>
+                          {msg.text}
+                        </div>
+                        <span style={{ fontSize: "10px", color: "#475569", marginTop: "3px" }}>
+                          {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={chatBottomRef} />
+              </div>
+
+              {/* Input — disabled after match ends */}
+              <div style={{
+                padding: "12px 16px", borderTop: "1px solid #1e293b",
+                display: "flex", gap: "8px",
+              }}>
+                <input
+                  type="text"
+                  placeholder={match.status === "playing" ? "Type a message…" : "Match ended"}
+                  value={chatInput}
+                  disabled={match.status !== "playing"}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
+                  style={{
+                    flex: 1, padding: "10px 14px", borderRadius: "10px",
+                    border: "1px solid #334155", background: match.status === "playing" ? "#1e293b" : "#0f172a",
+                    color: match.status === "playing" ? "white" : "#475569",
+                    fontSize: "14px", outline: "none", boxSizing: "border-box",
+                  }}
+                />
+                <button
+                  onClick={handleSendChat}
+                  disabled={match.status !== "playing" || !chatInput.trim()}
+                  style={{
+                    padding: "10px 16px", borderRadius: "10px", border: "none",
+                    background: match.status === "playing" && chatInput.trim() ? "#38bdf8" : "#1e293b",
+                    color: match.status === "playing" && chatInput.trim() ? "white" : "#475569",
+                    cursor: match.status === "playing" && chatInput.trim() ? "pointer" : "not-allowed",
+                    fontWeight: "bold", fontSize: "18px", transition: "all 0.2s",
+                    boxShadow: match.status === "playing" && chatInput.trim()
+                      ? "0 0 12px rgba(56,189,248,0.4)" : "none",
+                  }}>
+                  ➤
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Finished */}
           {match?.status === "finished" && (
             <div style={{ marginTop: "15px" }}>
@@ -1139,4 +1263,3 @@ export default function App() {
       )}
     </>
   );
-}
