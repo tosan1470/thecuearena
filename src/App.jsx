@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import logo from "./assets/logo.png";
 import {
   collection,
@@ -9,7 +9,7 @@ import {
   deleteDoc,
   runTransaction,
   setDoc,
-  getDoc  // used by fetchBalance
+  getDoc
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import {
@@ -19,9 +19,6 @@ import {
   onAuthStateChanged
 } from "firebase/auth";
 
-// ---------------------------------------------------------------------------
-// userId: stable anonymous identifier (used alongside Firebase Auth uid)
-// ---------------------------------------------------------------------------
 const userId =
   localStorage.getItem("userId") ||
   Math.random().toString(36).substring(7);
@@ -29,9 +26,6 @@ localStorage.setItem("userId", userId);
 
 const savedUsername = localStorage.getItem("username") || "";
 
-// ---------------------------------------------------------------------------
-// FIX 10: responsive hook — replaces window.innerWidth in JSX render
-// ---------------------------------------------------------------------------
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
   useEffect(() => {
@@ -42,13 +36,9 @@ function useWindowWidth() {
   return width;
 }
 
-// ---------------------------------------------------------------------------
-// FIX 11: helpers to read / write balance in Firestore under users/{uid}
-// ---------------------------------------------------------------------------
 async function fetchBalance(uid) {
   const snap = await getDoc(doc(db, "users", uid));
   if (snap.exists()) return snap.data().balance ?? 10;
-  // first login — create the doc with a $10 starting balance
   await setDoc(doc(db, "users", uid), { balance: 10 });
   return 10;
 }
@@ -57,33 +47,30 @@ async function persistBalance(uid, newBalance) {
   await setDoc(doc(db, "users", uid), { balance: newBalance }, { merge: true });
 }
 
-// ---------------------------------------------------------------------------
-// App
-// ---------------------------------------------------------------------------
 export default function App() {
-  const [bet, setBet]               = useState("");
-  // FIX 11: balance starts as null until loaded from Firestore
-  const [balance, setBalanceState]  = useState(null);
-  const [matches, setMatches]       = useState([]);
-  const [match, setMatch]           = useState(null);
+  const [bet, setBet]                   = useState("");
+  const [balance, setBalanceState]      = useState(null);
+  const [matches, setMatches]           = useState([]);
+  const [match, setMatch]               = useState(null);
   const [matchHistory, setMatchHistory] = useState(
     JSON.parse(localStorage.getItem("matchHistory")) || []
   );
-  const [isInGame, setIsInGame]     = useState(false);
-  const [username, setUsername]     = useState(savedUsername);
+  const [isInGame, setIsInGame] = useState(false);
+  const [username, setUsername] = useState(savedUsername);
   const [onlinePlayers, setOnlinePlayers] = useState(0);
-  const [now, setNow]               = useState(Date.now());
-  const [email, setEmail]           = useState("");
-  const [password, setPassword]     = useState("");
-  // FIX 6: start null; onAuthStateChanged sets the real value
-  const [user, setUser]             = useState(null);
+  const [now, setNow]   = useState(Date.now());
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [user, setUser] = useState(null);
 
   const windowWidth = useWindowWidth();
   const isMobile    = windowWidth < 768;
 
-  // ---------------------------------------------------------------------------
-  // FIX 11: balance setter that keeps Firestore in sync
-  // ---------------------------------------------------------------------------
+  // Ref to the match snapshot unsubscribe fn — we cancel it before deleteDoc
+  // so the snapshot never fires and overwrites our resolved match state.
+  const matchUnsubRef = useRef(null);
+
+  // Balance setter that keeps Firestore in sync
   const setBalance = (updaterOrValue) => {
     setBalanceState((prev) => {
       const next =
@@ -95,14 +82,11 @@ export default function App() {
     });
   };
 
-  // ---------------------------------------------------------------------------
-  // FIX 6: onAuthStateChanged — no more stale localStorage user
-  // ---------------------------------------------------------------------------
+  // Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // FIX 11: load persisted balance from Firestore on login
         const saved = await fetchBalance(firebaseUser.uid);
         setBalanceState(saved);
       } else {
@@ -112,13 +96,21 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Persist match history to localStorage
+  // Persist match history
   useEffect(() => {
     localStorage.setItem("matchHistory", JSON.stringify(matchHistory));
   }, [matchHistory]);
 
   // ---------------------------------------------------------------------------
-  // FIX 7: onSnapshot for current match — handle doc deleted externally
+  // onSnapshot for the current match.
+  //
+  // KEY FIX: when the doc is deleted (!docSnap.exists()), we must NOT reset
+  // match state if it is already "finished" or "disputed". The winner calls
+  // deleteDoc immediately after setting status:"finished", so the snapshot
+  // fires and would overwrite the victory screen with null — showing "Defeat".
+  //
+  // We also use this listener to promote Player 1's match from "waiting" →
+  // "playing" when an opponent joins, so the action buttons appear for them.
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!match?.id) return;
@@ -126,29 +118,40 @@ export default function App() {
     const matchRef = doc(db, "matches", match.id);
     const unsubscribe = onSnapshot(matchRef, (docSnap) => {
       if (!docSnap.exists()) {
-        // Match removed externally (expired cleanup, opponent cancelled, etc.)
-        setIsInGame(false);
-        setMatch(null);
+        setMatch((current) => {
+          if (current?.status === "finished" || current?.status === "disputed") {
+            return current;
+          }
+          setIsInGame(false);
+          return null;
+        });
         return;
       }
       const data = docSnap.data();
       const updated = { id: docSnap.id, ...data };
-      setMatch(updated);
-      setIsInGame(
-        updated.status === "playing" || updated.status === "waiting"
-      );
+      setMatch((current) => {
+        if (current?.status === "finished" || current?.status === "disputed") {
+          return current;
+        }
+        return updated;
+      });
+      setIsInGame(updated.status === "playing" || updated.status === "waiting");
     });
 
-    return () => unsubscribe();
+    matchUnsubRef.current = unsubscribe;
+    return () => {
+      unsubscribe();
+      matchUnsubRef.current = null;
+    };
   }, [match?.id]);
 
-  // Clock tick for countdown timers
+  // Clock tick
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Live lobby listener
+  // Live lobby
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "matches"), (snapshot) => {
       const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -163,7 +166,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // FIX 8: auto-delete my own expired waiting matches
+  // Auto-delete expired waiting matches
   useEffect(() => {
     if (!match?.id || match.status !== "waiting") return;
     if (match.expiresAt && match.expiresAt < now) {
@@ -173,11 +176,6 @@ export default function App() {
     }
   }, [now, match]);
 
-  // ---------------------------------------------------------------------------
-  // FIX 5: Deposit — redirect to Stripe. Balance is credited server-side via
-  // webhook (POST /webhook in your backend), NOT from ?success=true in the URL.
-  // The ?success=true param has been removed entirely to prevent exploitation.
-  // ---------------------------------------------------------------------------
   const handleDeposit = async () => {
     try {
       const response = await fetch(
@@ -196,9 +194,6 @@ export default function App() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // FIX 1: read bet input with validation
-  // ---------------------------------------------------------------------------
   const handleCreateMatch = async () => {
     const entryFee = parseFloat(bet);
     if (isNaN(entryFee) || entryFee < 1) {
@@ -209,7 +204,6 @@ export default function App() {
       alert("Insufficient balance");
       return;
     }
-
     try {
       const docRef = await addDoc(collection(db, "matches"), {
         bet: entryFee,
@@ -219,15 +213,15 @@ export default function App() {
         player1: userId,
         player1Name: username || "Anonymous",
         player2: null,
-        winClaim: null,         // FIX 4: track who claimed the win
+        winClaim: null,
       });
-
       setBalance((prev) => prev - entryFee);
       setMatch({
         id: docRef.id,
         bet: entryFee,
         status: "waiting",
         player1: userId,
+        player1Name: username || "Anonymous",
         player2: null,
       });
       alert("Match created!");
@@ -237,17 +231,14 @@ export default function App() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // FIX 9: runTransaction prevents two players joining simultaneously
-  // ---------------------------------------------------------------------------
   const handleJoinMatch = async (matchId, matchBet) => {
     if ((balance ?? 0) < matchBet) {
       alert("Insufficient balance");
       return;
     }
-
     try {
       const matchRef = doc(db, "matches", matchId);
+      let firestoreData = null;
 
       await runTransaction(db, async (transaction) => {
         const snap = await transaction.get(matchRef);
@@ -255,7 +246,7 @@ export default function App() {
         const data = snap.data();
         if (data.status !== "waiting") throw new Error("Match is no longer available");
         if (data.player1 === userId)   throw new Error("You cannot join your own match");
-
+        firestoreData = data;
         transaction.update(matchRef, {
           status: "playing",
           player2: userId,
@@ -264,7 +255,16 @@ export default function App() {
       });
 
       setBalance((prev) => prev - matchBet);
-      setMatch({ id: matchId, bet: matchBet, status: "playing", player2: userId });
+      // Store full match data including player1 so result logic works correctly
+      setMatch({
+        id: matchId,
+        bet: matchBet,
+        status: "playing",
+        player1: firestoreData.player1,
+        player1Name: firestoreData.player1Name,
+        player2: userId,
+        player2Name: username || "Anonymous",
+      });
       alert("Joined match! Game starting...");
     } catch (err) {
       console.error(err);
@@ -273,21 +273,21 @@ export default function App() {
   };
 
   // ---------------------------------------------------------------------------
-  // FIX 4: win submission — both players must submit; only when both agree does
-  // the winner get credited. If claims differ, the match moves to "disputed".
+  // Result submission — mutual confirmation required.
   //
-  // Flow:
-  //   Player A clicks "Submit Win" → winClaim: { [playerAId]: "win" }
-  //   Player B clicks "Submit Win" → both claimed win → status: "disputed"
-  //   Player B clicks "Submit Loss" → confirms A won → payout + delete
+  // The outcome object is built INSIDE the transaction so we always have the
+  // correct winner/loser before the doc is deleted. We never re-read after the
+  // transaction because the winner deletes the doc immediately and a subsequent
+  // getDoc would return nothing.
+  //
+  // Only the WINNER calls deleteDoc. The loser just updates local state.
+  // This prevents the race where the loser deletes first and the winner's
+  // snapshot fires !exists before setMatch("finished") has rendered.
   // ---------------------------------------------------------------------------
   const handleSubmitResult = async (result) => {
     if (!match?.id) return;
     const matchRef = doc(db, "matches", match.id);
-
-    // We resolve the outcome inside the transaction so we have all the data
-    // we need before the doc might get deleted by the other player.
-    let outcome = null; // { status, winner, bet }
+    let outcome = null;
 
     try {
       await runTransaction(db, async (transaction) => {
@@ -295,33 +295,28 @@ export default function App() {
         if (!snap.exists()) throw new Error("Match not found");
         const data = snap.data();
 
-        // Always derive opponentId from Firestore data — never from local state
-        // (local state for the joiner is missing player1/player2 fields).
+        // Derive opponent from Firestore — never from local state which may
+        // be incomplete (e.g. Player 2's local state doesn't have player1).
         const opponentId =
           data.player1 === userId ? data.player2 : data.player1;
-
         const existingClaim = data.winClaim ?? {};
 
         if (result === "win") {
           if (existingClaim[opponentId] === "win") {
-            // Both claim win → dispute
             transaction.update(matchRef, { status: "disputed" });
             outcome = { status: "disputed", bet: data.bet };
           } else if (existingClaim[opponentId] === "loss") {
-            // Opponent already conceded → this player wins
             transaction.update(matchRef, { status: "finished", winner: userId });
             outcome = { status: "finished", winner: userId, bet: data.bet };
           } else {
-            // First claim — record and wait
             transaction.update(matchRef, {
               winClaim: { ...existingClaim, [userId]: "win" },
             });
             outcome = { status: "pending" };
           }
         } else {
-          // result === "loss" — this player concedes
+          // "loss"
           if (existingClaim[opponentId] === "win") {
-            // Opponent already claimed win → confirm payout to opponent
             transaction.update(matchRef, { status: "finished", winner: opponentId });
             outcome = { status: "finished", winner: opponentId, bet: data.bet };
           } else {
@@ -333,12 +328,9 @@ export default function App() {
         }
       });
 
-      // Act on the outcome we captured inside the transaction.
-      // We never re-read the doc here — it may already be deleted by the winner.
       if (outcome.status === "finished") {
-        const iWon = outcome.winner === userId;
-        const totalPool = (outcome.bet ?? 0) * 2;
-        const winnings  = totalPool * 0.9; // 10% platform fee
+        const iWon    = outcome.winner === userId;
+        const winnings = (outcome.bet ?? 0) * 2 * 0.9;
 
         if (iWon) {
           setBalance((prev) => prev + winnings);
@@ -347,18 +339,29 @@ export default function App() {
             ...prev,
           ]);
           setMatch({ status: "finished", winnings });
-          // Only the winner deletes the match doc — prevents a race where
-          // the loser deletes it first and the winner's getDoc returns nothing.
-          await deleteDoc(matchRef).catch(() => {});
+          setIsInGame(false);
+          // Cancel the snapshot listener BEFORE deleting the doc so it never
+          // fires and overwrites our "finished" state with the Firestore doc
+          // (which has no winnings field) or with null.
+          if (matchUnsubRef.current) {
+            matchUnsubRef.current();
+            matchUnsubRef.current = null;
+          }
+          deleteDoc(matchRef).catch(console.error);
         } else {
           setMatchHistory((prev) => [
             { result: "LOSS", amount: outcome.bet, date: new Date().toLocaleTimeString() },
             ...prev,
           ]);
           setMatch({ status: "finished", winnings: 0 });
-          // Loser does NOT delete — winner handles cleanup above.
+          setIsInGame(false);
+          // Cancel the listener so the winner's deleteDoc doesn't fire
+          // !exists and accidentally reset the "Defeat" screen.
+          if (matchUnsubRef.current) {
+            matchUnsubRef.current();
+            matchUnsubRef.current = null;
+          }
         }
-        setIsInGame(false);
 
       } else if (outcome.status === "disputed") {
         setMatch((m) => ({ ...m, status: "disputed" }));
@@ -377,9 +380,6 @@ export default function App() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // FIX 3: rematch — creates a real Firestore doc
-  // ---------------------------------------------------------------------------
   const handleRematch = async () => {
     const entryFee = 1;
     if ((balance ?? 0) < entryFee) {
@@ -403,6 +403,7 @@ export default function App() {
         bet: entryFee,
         status: "waiting",
         player1: userId,
+        player1Name: username || "Anonymous",
         player2: null,
       });
       alert("Rematch created! Waiting for opponent...");
@@ -427,7 +428,6 @@ export default function App() {
     if (!match?.id) return;
     try {
       await deleteDoc(doc(db, "matches", match.id));
-      // Refund the entry fee
       setBalance((prev) => prev + match.bet);
       setMatch(null);
       setIsInGame(false);
@@ -455,7 +455,6 @@ export default function App() {
     }
   };
 
-  // FIX 2: logout is wired to a button in the header below
   const handleLogout = async () => {
     await signOut(auth);
     setUser(null);
@@ -465,7 +464,7 @@ export default function App() {
   };
 
   // ---------------------------------------------------------------------------
-  // Shared styles
+  // Styles
   // ---------------------------------------------------------------------------
   const inputStyle = {
     width: isMobile ? "100%" : "250px",
@@ -495,9 +494,6 @@ export default function App() {
     transition: "all 0.3s ease",
   });
 
-  // ---------------------------------------------------------------------------
-  // Header (shared between auth states)
-  // ---------------------------------------------------------------------------
   const Header = () => (
     <div style={{
       width: "100%", padding: "15px 30px", background: "#111827",
@@ -516,7 +512,6 @@ export default function App() {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <div style={{ color: "#22c55e", fontWeight: "bold" }}>● LIVE</div>
-        {/* FIX 2: logout button shown when logged in */}
         {user && (
           <button onClick={handleLogout}
             style={{ ...btnBase, background: "#ef4444", padding: "8px 16px", fontSize: "13px" }}>
@@ -530,13 +525,20 @@ export default function App() {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
+
+  // Derive playing state from match — true when both players are present
+  // regardless of whether local state was set by create or join path
+  const isPlaying =
+    match?.status === "playing" &&
+    match?.player1 &&
+    match?.player2 &&
+    match.player1 !== match.player2;
+
   return (
-    // FIX 12: single root fragment wrapping everything
     <>
       <Header />
 
       {!user ? (
-        /* ---- Login / Sign Up ---- */
         <div style={{
           padding: isMobile ? "15px" : "30px", fontFamily: "Arial",
           background: "#0f172a", minHeight: "100vh", color: "white",
@@ -547,7 +549,6 @@ export default function App() {
           }}>
             thecuearena
           </h1>
-
           <div style={{ marginBottom: "10px" }}>
             <input type="email" placeholder="Email" value={email}
               onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
@@ -569,7 +570,6 @@ export default function App() {
         </div>
 
       ) : (
-        /* ---- Authenticated app ---- */
         <div style={{
           padding: isMobile ? "15px" : "30px", fontFamily: "Arial",
           background: "#0f172a", minHeight: "100vh", color: "white",
@@ -586,7 +586,7 @@ export default function App() {
             />
           </div>
 
-          {/* Wallet — FIX 11: balance loaded from Firestore */}
+          {/* Wallet */}
           <div style={{
             background: "#1e293b", padding: "20px", borderRadius: "15px",
             marginBottom: "20px", boxShadow: "0 0 15px rgba(56,189,248,0.3)",
@@ -597,7 +597,6 @@ export default function App() {
             </h1>
           </div>
 
-          {/* FIX 5: Deposit — no ?success param exploit */}
           <button onClick={handleDeposit}
             style={{ ...glowBtn("#38bdf8", "56,189,248", false), marginRight: "10px", padding: "12px 20px" }}>
             Deposit $10
@@ -623,7 +622,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* FIX 1: Create match — reads bet input */}
+          {/* Create match */}
           <div style={{ marginTop: "20px" }}>
             <input type="number" style={inputStyle}
               placeholder="Enter bet ($1 min)" value={bet}
@@ -635,8 +634,8 @@ export default function App() {
             </button>
           </div>
 
-          {/* Waiting state — FIX 8: cancel button cleans up Firestore + refunds */}
-          {match && match.status === "waiting" && (
+          {/* Waiting */}
+          {match?.status === "waiting" && (
             <div style={{ marginTop: "15px" }}>
               <p>Bet: ${match.bet} — Waiting for opponent…</p>
               <button onClick={handleCancelMatch}
@@ -646,38 +645,37 @@ export default function App() {
             </div>
           )}
 
-          {/* Playing state — FIX 4: dual Submit Win / Concede buttons */}
-          {match && match.status === "playing" &&
-            match.player2 && match.player1 !== match.player2 && (
-              <div style={{ marginTop: "15px" }}>
-                <p style={{ marginBottom: "10px" }}>
-                  Game in progress vs{" "}
-                  <strong>
-                    {match.player1 === userId ? match.player2Name : match.player1Name}
-                  </strong>
-                </p>
-                <p style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "12px" }}>
-                  Both players must confirm the result. If both claim a win, the match goes to admin review.
-                </p>
-                <button onClick={() => handleSubmitResult("win")}
-                  style={{ ...glowBtn("#22c55e", "34,197,94", false), marginRight: "10px" }}>
-                  I Won
-                </button>
-                <button onClick={() => handleSubmitResult("loss")}
-                  style={{ ...glowBtn("#ef4444", "239,68,68", false), marginRight: "10px" }}>
-                  I Lost
-                </button>
-                <button onClick={handleDispute}
-                  style={{ ...glowBtn("#f59e0b", "245,158,11", false) }}>
-                  Dispute
-                </button>
-              </div>
-            )}
-
-          {/* Finished state */}
-          {match && match.status === "finished" && (
+          {/* Playing — uses derived isPlaying so it works for both creator and joiner */}
+          {isPlaying && (
             <div style={{ marginTop: "15px" }}>
-              {match.winnings > 0 ? (
+              <p style={{ marginBottom: "10px" }}>
+                Game in progress vs{" "}
+                <strong>
+                  {match.player1 === userId ? match.player2Name : match.player1Name}
+                </strong>
+              </p>
+              <p style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "12px" }}>
+                Both players must confirm the result. If both claim a win, the match goes to admin review.
+              </p>
+              <button onClick={() => handleSubmitResult("win")}
+                style={{ ...glowBtn("#22c55e", "34,197,94", false), marginRight: "10px" }}>
+                I Won
+              </button>
+              <button onClick={() => handleSubmitResult("loss")}
+                style={{ ...glowBtn("#ef4444", "239,68,68", false), marginRight: "10px" }}>
+                I Lost
+              </button>
+              <button onClick={handleDispute}
+                style={{ ...glowBtn("#f59e0b", "245,158,11", false) }}>
+                Dispute
+              </button>
+            </div>
+          )}
+
+          {/* Finished */}
+          {match?.status === "finished" && (
+            <div style={{ marginTop: "15px" }}>
+              {(match.winnings ?? 0) > 0 ? (
                 <div style={{
                   background: "#14532d", border: "1px solid #22c55e",
                   padding: "20px", borderRadius: "15px", textAlign: "center",
@@ -702,10 +700,11 @@ export default function App() {
             </div>
           )}
 
-          {match && match.status === "completed" && (
+          {match?.status === "completed" && (
             <p style={{ marginTop: "15px" }}>Match Completed — Winner Paid</p>
           )}
-          {match && match.status === "disputed" && (
+
+          {match?.status === "disputed" && (
             <div style={{
               marginTop: "15px", background: "#422006", border: "1px solid #f59e0b",
               padding: "15px", borderRadius: "12px",
@@ -742,19 +741,13 @@ export default function App() {
           <div style={{ marginTop: "20px" }}>
             <h3>Available Matches</h3>
             {matches.filter(
-              (m) =>
-                m.status === "waiting" &&
-                m.player1 !== userId &&
-                m.expiresAt > now
+              (m) => m.status === "waiting" && m.player1 !== userId && m.expiresAt > now
             ).length === 0 ? (
               <p>No matches available</p>
             ) : (
               matches
                 .filter(
-                  (m) =>
-                    m.status === "waiting" &&
-                    m.player1 !== userId &&
-                    m.expiresAt > now
+                  (m) => m.status === "waiting" && m.player1 !== userId && m.expiresAt > now
                 )
                 .map((m) => (
                   <div key={m.id} style={{
@@ -765,14 +758,9 @@ export default function App() {
                     <p>Bet: ${m.bet}</p>
                     <p style={{ color: "#facc15", fontWeight: "bold", marginTop: "5px" }}>
                       ⏱ Expires in:{" "}
-                      {String(
-                        Math.floor(Math.max(0, m.expiresAt - now) / 60000)
-                      ).padStart(2, "0")}:
-                      {String(
-                        Math.floor((Math.max(0, m.expiresAt - now) % 60000) / 1000)
-                      ).padStart(2, "0")}
+                      {String(Math.floor(Math.max(0, m.expiresAt - now) / 60000)).padStart(2, "0")}:
+                      {String(Math.floor((Math.max(0, m.expiresAt - now) % 60000) / 1000)).padStart(2, "0")}
                     </p>
-
                     <div style={{
                       display: "inline-block", padding: "6px 12px",
                       borderRadius: "999px", background: "rgba(34,197,94,0.2)",
@@ -781,13 +769,11 @@ export default function App() {
                     }}>
                       WAITING
                     </div>
-
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "10px" }}>
                       <div style={{
                         width: "45px", height: "45px", borderRadius: "50%",
                         background: "#22c55e", display: "flex", alignItems: "center",
-                        justifyContent: "center", fontWeight: "bold", color: "white",
-                        fontSize: "18px",
+                        justifyContent: "center", fontWeight: "bold", color: "white", fontSize: "18px",
                       }}>
                         {m.player1Name?.charAt(0).toUpperCase()}
                       </div>
@@ -798,7 +784,6 @@ export default function App() {
                         <small style={{ color: "#94a3b8" }}>Ready to Play</small>
                       </div>
                     </div>
-
                     <button onClick={() => handleJoinMatch(m.id, m.bet)}
                       disabled={isInGame}
                       style={{
