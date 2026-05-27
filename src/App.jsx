@@ -61,6 +61,9 @@ export default function App() {
   const [now, setNow]   = useState(Date.now());
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [dob, setDob] = useState("");
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [user, setUser] = useState(null);
 
   const windowWidth = useWindowWidth();
@@ -483,9 +486,39 @@ export default function App() {
   };
 
   const handleSignUp = async () => {
+    // Validate password match
+    if (password !== confirmPassword) {
+      alert("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+    // Validate DOB — must be at least 18 years old
+    if (!dob) {
+      alert("Please enter your date of birth.");
+      return;
+    }
+    const dobDate = new Date(dob);
+    const today = new Date();
+    const age = today.getFullYear() - dobDate.getFullYear() -
+      (today < new Date(today.getFullYear(), dobDate.getMonth(), dobDate.getDate()) ? 1 : 0);
+    if (age < 18) {
+      alert("You must be at least 18 years old to register.");
+      return;
+    }
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Store DOB in Firestore user doc
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        dob,
+        balance: 10,
+      });
       alert("Account created successfully!");
+      setIsSignUpMode(false);
+      setConfirmPassword("");
+      setDob("");
     } catch (error) {
       alert(error.message);
     }
@@ -587,30 +620,138 @@ export default function App() {
         <div style={{
           padding: isMobile ? "15px" : "30px", fontFamily: "Arial",
           background: "#0f172a", minHeight: "100vh", color: "white",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         }}>
-          <h1 style={{
-            fontSize: isMobile ? "32px" : "42px", fontWeight: "bold",
-            color: "#38bdf8", marginBottom: "20px", textShadow: "0 0 20px #38bdf8",
+          {/* Logo + title */}
+          <div style={{ textAlign: "center", marginBottom: "30px" }}>
+            <img src={logo} alt="thecuearena" style={{
+              width: "80px", height: "80px", borderRadius: "16px",
+              boxShadow: "0 0 25px rgba(234,179,8,0.7)", marginBottom: "12px",
+            }} />
+            <h1 style={{
+              fontSize: isMobile ? "28px" : "36px", fontWeight: "bold",
+              color: "#38bdf8", margin: 0, textShadow: "0 0 20px #38bdf8",
+            }}>
+              thecuearena
+            </h1>
+          </div>
+
+          {/* Card */}
+          <div style={{
+            background: "#1e293b", borderRadius: "20px", padding: "30px",
+            width: isMobile ? "100%" : "400px", boxSizing: "border-box",
+            boxShadow: "0 0 30px rgba(56,189,248,0.2)", border: "1px solid #334155",
           }}>
-            thecuearena
-          </h1>
-          <div style={{ marginBottom: "10px" }}>
-            <input type="email" placeholder="Email" value={email}
-              onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <input type="password" placeholder="Password" value={password}
-              onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: "15px" }}>
-            <button onClick={handleSignUp}
-              style={{ ...btnBase, background: "#22c55e", marginRight: "10px" }}>
-              Sign Up
+            {/* Tab toggle */}
+            <div style={{ display: "flex", marginBottom: "24px", borderRadius: "10px", overflow: "hidden", border: "1px solid #334155" }}>
+              <button
+                onClick={() => setIsSignUpMode(false)}
+                style={{
+                  flex: 1, padding: "10px", border: "none", fontWeight: "bold",
+                  cursor: "pointer", fontSize: "14px", transition: "all 0.2s",
+                  background: !isSignUpMode ? "#38bdf8" : "transparent",
+                  color: !isSignUpMode ? "white" : "#94a3b8",
+                }}>
+                Login
+              </button>
+              <button
+                onClick={() => setIsSignUpMode(true)}
+                style={{
+                  flex: 1, padding: "10px", border: "none", fontWeight: "bold",
+                  cursor: "pointer", fontSize: "14px", transition: "all 0.2s",
+                  background: isSignUpMode ? "#22c55e" : "transparent",
+                  color: isSignUpMode ? "white" : "#94a3b8",
+                }}>
+                Sign Up
+              </button>
+            </div>
+
+            {/* Email */}
+            <div style={{ marginBottom: "12px" }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "5px" }}>
+                EMAIL
+              </label>
+              <input type="email" placeholder="you@example.com" value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ ...inputStyle, width: "100%", marginRight: 0 }} />
+            </div>
+
+            {/* Password */}
+            <div style={{ marginBottom: "12px" }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "5px" }}>
+                PASSWORD
+              </label>
+              <input type="password" placeholder="Min. 6 characters" value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ ...inputStyle, width: "100%", marginRight: 0 }} />
+            </div>
+
+            {/* Sign-up only fields */}
+            {isSignUpMode && (
+              <>
+                {/* Confirm password */}
+                <div style={{ marginBottom: "12px" }}>
+                  <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "5px" }}>
+                    CONFIRM PASSWORD
+                  </label>
+                  <input type="password" placeholder="Re-enter password" value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={{
+                      ...inputStyle, width: "100%", marginRight: 0,
+                      borderColor: confirmPassword && confirmPassword !== password ? "#ef4444" : "#334155",
+                    }} />
+                  {confirmPassword && confirmPassword !== password && (
+                    <p style={{ color: "#ef4444", fontSize: "11px", margin: "4px 0 0" }}>
+                      Passwords do not match
+                    </p>
+                  )}
+                  {confirmPassword && confirmPassword === password && (
+                    <p style={{ color: "#22c55e", fontSize: "11px", margin: "4px 0 0" }}>
+                      ✓ Passwords match
+                    </p>
+                  )}
+                </div>
+
+                {/* Date of birth */}
+                <div style={{ marginBottom: "12px" }}>
+                  <label style={{ display: "block", color: "#94a3b8", fontSize: "12px", marginBottom: "5px" }}>
+                    DATE OF BIRTH <span style={{ color: "#64748b" }}>(must be 18+)</span>
+                  </label>
+                  <input type="date" value={dob}
+                    onChange={(e) => setDob(e.target.value)}
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+                    style={{ ...inputStyle, width: "100%", marginRight: 0, colorScheme: "dark" }} />
+                </div>
+              </>
+            )}
+
+            {/* Submit button */}
+            <button
+              onClick={isSignUpMode ? handleSignUp : handleLogin}
+              style={{
+                width: "100%", padding: "13px", borderRadius: "10px", border: "none",
+                fontWeight: "bold", fontSize: "15px", cursor: "pointer",
+                background: isSignUpMode ? "#22c55e" : "#38bdf8",
+                color: "white", marginTop: "8px",
+                boxShadow: isSignUpMode
+                  ? "0 0 20px rgba(34,197,94,0.4)"
+                  : "0 0 20px rgba(56,189,248,0.4)",
+                transition: "all 0.2s",
+              }}>
+              {isSignUpMode ? "Create Account" : "Login"}
             </button>
-            <button onClick={handleLogin}
-              style={{ ...btnBase, background: "#38bdf8" }}>
-              Login
-            </button>
+
+            {/* Toggle hint */}
+            <p style={{ textAlign: "center", color: "#64748b", fontSize: "13px", marginTop: "16px", marginBottom: 0 }}>
+              {isSignUpMode
+                ? <>Already have an account?{" "}
+                    <span onClick={() => setIsSignUpMode(false)}
+                      style={{ color: "#38bdf8", cursor: "pointer" }}>Login</span></>
+                : <>New here?{" "}
+                    <span onClick={() => setIsSignUpMode(true)}
+                      style={{ color: "#22c55e", cursor: "pointer" }}>Create an account</span></>
+              }
+            </p>
           </div>
         </div>
 
