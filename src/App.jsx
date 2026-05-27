@@ -75,7 +75,7 @@ export default function App() {
   const windowWidth = useWindowWidth();
   const isMobile    = windowWidth < 768;
 
-  // Ref to the match snapshot unsubscribe fn — we cancel it before deleteDoc
+  // Ref to the match snapshot unsubscribe fn &mdash; we cancel it before deleteDoc
   // so the snapshot never fires and overwrites our resolved match state.
   const matchUnsubRef = useRef(null);
 
@@ -116,7 +116,7 @@ export default function App() {
   // KEY FIX: when the doc is deleted (!docSnap.exists()), we must NOT reset
   // match state if it is already "finished" or "disputed". The winner calls
   // deleteDoc immediately after setting status:"finished", so the snapshot
-  // fires and would overwrite the victory screen with null — showing "Defeat".
+  // fires and would overwrite the victory screen with null &mdash; showing "Defeat".
   //
   // We also use this listener to promote Player 1's match from "waiting" →
   // "playing" when an opponent joins, so the action buttons appear for them.
@@ -127,7 +127,7 @@ export default function App() {
     const matchRef = doc(db, "matches", match.id);
     const unsubscribe = onSnapshot(matchRef, (docSnap) => {
       if (!docSnap.exists()) {
-        // Doc deleted — keep screen if already resolved, otherwise reset
+        // Doc deleted &mdash; keep screen if already resolved, otherwise reset
         setMatch((current) => {
           if (current?.status === "finished" || current?.status === "disputed") {
             return current;
@@ -141,7 +141,7 @@ export default function App() {
       const data = docSnap.data();
 
       // If Firestore says the match is now "finished", resolve it here with
-      // correct winnings — this is the path for the player who submitted
+      // correct winnings &mdash; this is the path for the player who submitted
       // FIRST (pending state) and is waiting for the opponent to confirm.
       // The snapshot is how they learn the match resolved.
       if (data.status === "finished" && data.winner) {
@@ -182,7 +182,7 @@ export default function App() {
         return;
       }
 
-      // Match still in progress — update normally
+      // Match still in progress &mdash; update normally
       setMatch((current) => {
         if (current?.status === "finished" || current?.status === "disputed") {
           return current;
@@ -343,7 +343,7 @@ export default function App() {
   };
 
   // ---------------------------------------------------------------------------
-  // Result submission — mutual confirmation required.
+  // Result submission &mdash; mutual confirmation required.
   //
   // The outcome object is built INSIDE the transaction so we always have the
   // correct winner/loser before the doc is deleted. We never re-read after the
@@ -365,7 +365,7 @@ export default function App() {
         if (!snap.exists()) throw new Error("Match not found");
         const data = snap.data();
 
-        // Derive opponent from Firestore — never from local state which may
+        // Derive opponent from Firestore &mdash; never from local state which may
         // be incomplete (e.g. Player 2's local state doesn't have player1).
         const opponentId =
           data.player1 === userId ? data.player2 : data.player1;
@@ -526,7 +526,7 @@ export default function App() {
       alert("Password must be at least 6 characters.");
       return;
     }
-    // Validate DOB — must be at least 18 years old
+    // Validate DOB &mdash; must be at least 18 years old
     if (!dob) {
       alert("Please enter your date of birth.");
       return;
@@ -620,7 +620,7 @@ export default function App() {
         </h2>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <div style={{ color: "#22c55e", fontWeight: "bold" }}>● LIVE</div>
+        <div style={{ color: "#22c55e", fontWeight: "bold" }}>&#9679; LIVE</div>
         {user && (
           <button onClick={handleLogout}
             style={{ ...btnBase, background: "#ef4444", padding: "8px 16px", fontSize: "13px" }}>
@@ -635,7 +635,7 @@ export default function App() {
   // Render
   // ---------------------------------------------------------------------------
 
-  // Derive playing state from match — true when both players are present
+  // Derive playing state from match &mdash; true when both players are present
   // regardless of whether local state was set by create or join path
   const isPlaying =
     match?.status === "playing" &&
@@ -738,7 +738,7 @@ export default function App() {
                   )}
                   {confirmPassword && confirmPassword === password && (
                     <p style={{ color: "#22c55e", fontSize: "11px", margin: "4px 0 0" }}>
-                      ✓ Passwords match
+                      &#10003; Passwords match
                     </p>
                   )}
                 </div>
@@ -756,7 +756,7 @@ export default function App() {
               </>
             )}
 
-            {/* Agreements — sign-up only */}
+            {/* Agreements &mdash; sign-up only */}
             {isSignUpMode && (
               <div style={{ marginBottom: "16px", marginTop: "4px" }}>
                 {/* Terms of Service */}
@@ -863,7 +863,7 @@ export default function App() {
           }}>
             <h2 style={{ color: "#38bdf8", margin: 0 }}>Wallet Balance</h2>
             <h1 style={{ marginTop: "10px", fontSize: isMobile ? "28px" : "36px" }}>
-              {balance === null ? "Loading…" : `$${balance.toFixed(2)}`}
+              {balance === null ? "Loading..." : `$${balance.toFixed(2)}`}
             </h1>
           </div>
 
@@ -888,7 +888,7 @@ export default function App() {
               borderRadius: "12px", border: "1px solid #334155",
               color: "#22c55e", fontWeight: "bold",
             }}>
-              ● LIVE PLAYERS: {onlinePlayers}
+              &#9679; LIVE PLAYERS: {onlinePlayers}
             </div>
           </div>
 
@@ -907,7 +907,7 @@ export default function App() {
           {/* Waiting */}
           {match?.status === "waiting" && (
             <div style={{ marginTop: "15px" }}>
-              <p>Bet: ${match.bet} — Waiting for opponent…</p>
+              <p>Bet: ${match.bet} &mdash; Waiting for opponent...</p>
               <button onClick={handleCancelMatch}
                 style={{ ...btnBase, background: "#ef4444", fontSize: "13px", padding: "8px 14px" }}>
                 Cancel Match
@@ -915,7 +915,7 @@ export default function App() {
             </div>
           )}
 
-          {/* Playing — uses derived isPlaying so it works for both creator and joiner */}
+          {/* Playing &mdash; uses derived isPlaying so it works for both creator and joiner */}
           {isPlaying && (
             <div style={{ marginTop: "15px" }}>
               <p style={{ marginBottom: "10px" }}>
@@ -942,7 +942,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ── Chat — visible whenever a match is active or just finished ── */}
+          {/* -- Chat &mdash; visible whenever a match is active or just finished -- */}
           {match && (match.status === "playing" || match.status === "finished" || match.status === "disputed") && (
             <div style={{
               marginTop: "20px", background: "#111827",
@@ -964,7 +964,7 @@ export default function App() {
                   background: "rgba(34,197,94,0.1)", border: "1px solid #22c55e",
                   borderRadius: "999px", padding: "2px 8px",
                 }}>
-                  ● LIVE
+                  &#9679; LIVE
                 </span>
               </div>
 
@@ -1010,14 +1010,14 @@ export default function App() {
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Input — disabled after match ends */}
+              {/* Input &mdash; disabled after match ends */}
               <div style={{
                 padding: "12px 16px", borderTop: "1px solid #1e293b",
                 display: "flex", gap: "8px",
               }}>
                 <input
                   type="text"
-                  placeholder={match.status === "playing" ? "Type a message…" : "Match ended"}
+                  placeholder={match.status === "playing" ? "Type a message..." : "Match ended"}
                   value={chatInput}
                   disabled={match.status !== "playing"}
                   onChange={(e) => setChatInput(e.target.value)}
@@ -1041,7 +1041,7 @@ export default function App() {
                     boxShadow: match.status === "playing" && chatInput.trim()
                       ? "0 0 12px rgba(56,189,248,0.4)" : "none",
                   }}>
-                  ➤
+                  &#10148;
                 </button>
               </div>
             </div>
@@ -1076,7 +1076,7 @@ export default function App() {
           )}
 
           {match?.status === "completed" && (
-            <p style={{ marginTop: "15px" }}>Match Completed — Winner Paid</p>
+            <p style={{ marginTop: "15px" }}>Match Completed &mdash; Winner Paid</p>
           )}
 
           {match?.status === "disputed" && (
@@ -1085,7 +1085,7 @@ export default function App() {
               padding: "15px", borderRadius: "12px",
             }}>
               <p style={{ color: "#fbbf24", margin: 0 }}>
-                ⚠️ Match Disputed — Admin Review in Progress
+                ⚠️ Match Disputed &mdash; Admin Review in Progress
               </p>
             </div>
           )}
@@ -1227,7 +1227,7 @@ export default function App() {
             ) : (
               <div style={{ color: "#cbd5e1", fontSize: "14px", lineHeight: 1.7 }}>
                 <p><strong style={{ color: "white" }}>1. Information We Collect</strong><br />
-                We collect your email address, date of birth, username, match history, and wallet balance. We do not collect payment card details — all payments are processed securely by Stripe.</p>
+                We collect your email address, date of birth, username, match history, and wallet balance. We do not collect payment card details &mdash; all payments are processed securely by Stripe.</p>
                 <p><strong style={{ color: "white" }}>2. How We Use Your Information</strong><br />
                 Your data is used solely to operate the platform: authenticating your account, managing your wallet, recording match results, and enforcing fair play.</p>
                 <p><strong style={{ color: "white" }}>3. Data Storage</strong><br />
@@ -1263,3 +1263,4 @@ export default function App() {
       )}
     </>
   );
+}
