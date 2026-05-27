@@ -118,6 +118,7 @@ export default function App() {
     const matchRef = doc(db, "matches", match.id);
     const unsubscribe = onSnapshot(matchRef, (docSnap) => {
       if (!docSnap.exists()) {
+        // Doc deleted — keep screen if already resolved, otherwise reset
         setMatch((current) => {
           if (current?.status === "finished" || current?.status === "disputed") {
             return current;
@@ -127,15 +128,59 @@ export default function App() {
         });
         return;
       }
+
       const data = docSnap.data();
-      const updated = { id: docSnap.id, ...data };
+
+      // If Firestore says the match is now "finished", resolve it here with
+      // correct winnings — this is the path for the player who submitted
+      // FIRST (pending state) and is waiting for the opponent to confirm.
+      // The snapshot is how they learn the match resolved.
+      if (data.status === "finished" && data.winner) {
+        const iWon = data.winner === userId;
+        const winnings = (data.bet ?? 0) * 2 * 0.9;
+
+        // Unsubscribe immediately so nothing overwrites the result
+        if (matchUnsubRef.current) {
+          matchUnsubRef.current();
+          matchUnsubRef.current = null;
+        }
+
+        if (iWon) {
+          setBalance((prev) => prev + winnings);
+          setMatchHistory((prev) => [
+            { result: "WIN", amount: winnings, date: new Date().toLocaleTimeString() },
+            ...prev,
+          ]);
+          setMatch({ status: "finished", winnings });
+        } else {
+          setMatchHistory((prev) => [
+            { result: "LOSS", amount: data.bet, date: new Date().toLocaleTimeString() },
+            ...prev,
+          ]);
+          setMatch({ status: "finished", winnings: 0 });
+        }
+        setIsInGame(false);
+        return;
+      }
+
+      if (data.status === "disputed") {
+        if (matchUnsubRef.current) {
+          matchUnsubRef.current();
+          matchUnsubRef.current = null;
+        }
+        setMatch((current) => ({ ...current, status: "disputed" }));
+        setIsInGame(false);
+        return;
+      }
+
+      // Match still in progress — update normally
       setMatch((current) => {
         if (current?.status === "finished" || current?.status === "disputed") {
           return current;
         }
-        return updated;
+        return { id: docSnap.id, ...data };
       });
-      setIsInGame(updated.status === "playing" || updated.status === "waiting");
+      setIsInGame(data.status === "playing" || data.status === "waiting");
     });
 
     matchUnsubRef.current = unsubscribe;
