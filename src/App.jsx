@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import logo from "./assets/logo.png";
+import PoolGame from "./PoolGame";
 import {
   collection,
   addDoc,
