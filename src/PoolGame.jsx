@@ -1,414 +1,391 @@
 import React, { useEffect, useRef, useState } from "react";
 import Phaser from "phaser";
 
+const BALL_COLORS = [
+  null,           // 0 = cue
+  0xf5c518,       // 1 yellow solid
+  0x1a4fcc,       // 2 blue solid
+  0xd42020,       // 3 red solid
+  0x8b1aaa,       // 4 purple solid
+  0xe06010,       // 5 orange solid
+  0x1a8c2e,       // 6 green solid
+  0x8c1515,       // 7 maroon solid
+  0x111111,       // 8 black
+  0xf5c518,       // 9 yellow stripe
+  0x1a4fcc,       // 10 blue stripe
+  0xd42020,       // 11 red stripe
+  0x8b1aaa,       // 12 purple stripe
+  0xe06010,       // 13 orange stripe
+  0x1a8c2e,       // 14 green stripe
+  0x8c1515,       // 15 maroon stripe
+];
+
 export default function PoolGame() {
+  const mountRef = useRef(null);
   const gameRef = useRef(null);
-  const sceneRef = useRef(null);
-  const [gameState, setGameState] = useState({
+  const [ui, setUi] = useState({
     turn: 1,
-    p1Score: 0,
-    p2Score: 0,
-    message: "Player 1's Turn — Click & drag to aim",
+    p1: { name: "Player 1", score: 0, potted: [], type: null }, // type: 'solids'|'stripes'|null
+    p2: { name: "Player 2", score: 0, potted: [], type: null },
+    message: "Break! Player 1's turn",
     power: 0,
-    shooting: false,
+    ballsMoving: false,
     winner: null,
+    foul: false,
   });
 
   useEffect(() => {
-    if (gameRef.current) return;
+    if (gameRef.current || !mountRef.current) return;
 
+    // ─── SCENE ────────────────────────────────────────────────────────────────
     class PoolScene extends Phaser.Scene {
-      constructor() {
-        super("PoolScene");
-        this.isDragging = false;
-        this.dragStart = null;
-        this.power = 0;
+      constructor() { super("Pool"); }
+
+      // ── helpers ──────────────────────────────────────────────────────────────
+      makeTex(key, fn) {
+        if (this.textures.exists(key)) return;
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        fn(g);
+        g.generateTexture(key, 28, 28);
+        g.destroy();
+      }
+
+      genBallTex(num) {
+        const key = num === 0 ? "cueball" : `b${num}`;
+        const color = num === 0 ? 0xffffff : BALL_COLORS[num];
+        const stripe = num >= 9;
+        this.makeTex(key, g => {
+          // shadow
+          g.fillStyle(0x000000, 0.3); g.fillCircle(15, 16, 12);
+          if (stripe) {
+            g.fillStyle(0xffffff, 1); g.fillCircle(14, 14, 12);
+            g.fillStyle(color, 1);
+            g.slice(14, 14, 12, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(230), false);
+            g.fillPath();
+          } else {
+            g.fillStyle(color, 1); g.fillCircle(14, 14, 12);
+          }
+          // number badge
+          if (num > 0) {
+            g.fillStyle(0xffffff, 0.9); g.fillCircle(14, 14, 5);
+          }
+          // highlight
+          g.fillStyle(0xffffff, 0.5); g.fillCircle(10, 9, 4);
+        });
+        return key;
+      }
+
+      genPocketTex() {
+        this.makeTex("pocket", g => {
+          g.fillStyle(0x000000, 1); g.fillCircle(14, 14, 14);
+          g.fillStyle(0x1a1a1a, 1); g.fillCircle(14, 14, 11);
+        });
+      }
+
+      // ── create ───────────────────────────────────────────────────────────────
+      create() {
+        this.W = this.scale.width;
+        this.H = this.scale.height;
+
+        // table geometry
+        this.tX = 500; this.tY = 300;
+        this.tW = 820;  this.tH = 440;
+        this.left   = this.tX - this.tW / 2;
+        this.right  = this.tX + this.tW / 2;
+        this.top    = this.tY - this.tH / 2;
+        this.bottom = this.tY + this.tH / 2;
+
+        this.physics.world.setBounds(this.left, this.top, this.tW, this.tH);
+
+        // state
         this.currentPlayer = 1;
         this.scores = { 1: 0, 2: 0 };
-        this.ballsMoving = false;
+        this.pottedByPlayer = { 1: [], 2: [] };
+        this.playerType = { 1: null, 2: null }; // 'solids'|'stripes'
+        this.shooting = false;
         this.shotFired = false;
-        this.ballsPocketed = 0;
-      }
+        this.pottedThisTurn = [];
+        this.isDragging = false;
+        this.power = 0;
+        this.winner = null;
 
-      preload() {
-        // Generate all textures programmatically
-      }
+        this.buildTable();
+        this.genPocketTex();
 
-      generateBallTexture(name, color, number) {
-        const g = this.add.graphics();
-        // Shadow
-        g.fillStyle(0x000000, 0.25);
-        g.fillCircle(14, 15, 13);
-        // Main ball
-        g.fillStyle(color, 1);
-        g.fillCircle(13, 13, 13);
-        // Highlight
-        g.fillStyle(0xffffff, 0.45);
-        g.fillCircle(9, 8, 5);
-        // Stripe overlay for striped balls
-        if (number > 8 && number <= 15) {
-          g.fillStyle(0xffffff, 1);
-          g.fillRect(0, 6, 26, 14);
-          g.fillStyle(color, 1);
-          g.fillCircle(13, 13, 7);
-          // Re-highlight
-          g.fillStyle(0xffffff, 0.4);
-          g.fillCircle(9, 8, 4);
-        }
-        g.generateTexture(name, 26, 26);
-        g.destroy();
-      }
-
-      generateCueBallTexture() {
-        const g = this.add.graphics();
-        g.fillStyle(0x000000, 0.2);
-        g.fillCircle(14, 15, 13);
-        g.fillStyle(0xffffff, 1);
-        g.fillCircle(13, 13, 13);
-        g.fillStyle(0xffffff, 0.6);
-        g.fillCircle(9, 8, 5);
-        g.generateTexture("cueBall", 26, 26);
-        g.destroy();
-      }
-
-      create() {
-        sceneRef.current = this;
-
-        const W = 1000, H = 600;
-        const tableX = 500, tableY = 300;
-        const tableW = 860, tableH = 460;
-
-        // Dark background
-        this.add.rectangle(W / 2, H / 2, W, H, 0x0d0d14);
-
-        // Table shadow
-        this.add.rectangle(tableX + 6, tableY + 6, tableW + 60, tableH + 60, 0x000000, 0.5);
-
-        // Rail (outer border)
-        this.add.rectangle(tableX, tableY, tableW + 60, tableH + 60, 0x3b1f0a);
-
-        // Rail inner bevel
-        this.add.rectangle(tableX, tableY, tableW + 44, tableH + 44, 0x5c3010);
-
-        // Felt surface
-        this.add.rectangle(tableX, tableY, tableW, tableH, 0x0f5c2e);
-
-        // Felt lines/texture overlay
-        const felt = this.add.graphics();
-        felt.lineStyle(1, 0x0d5028, 0.4);
-        for (let x = tableX - tableW / 2; x <= tableX + tableW / 2; x += 20) {
-          felt.lineBetween(x, tableY - tableH / 2, x, tableY + tableH / 2);
-        }
-
-        // Table bounds for physics
-        const left = tableX - tableW / 2;
-        const right = tableX + tableW / 2;
-        const top = tableY - tableH / 2;
-        const bottom = tableY + tableH / 2;
-
-        // Invisible walls
-        this.physics.world.setBounds(left, top, tableW, tableH);
-
-        // Pocket positions
-        const pr = 22;
-        this.pockets = [
-          { x: left + pr, y: top + pr },
-          { x: tableX, y: top - 4 },
-          { x: right - pr, y: top + pr },
-          { x: left + pr, y: bottom - pr },
-          { x: tableX, y: bottom + 4 },
-          { x: right - pr, y: bottom - pr },
+        // pockets
+        this.pocketPositions = [
+          { x: this.left  + 22, y: this.top    + 22 },
+          { x: this.tX,         y: this.top    - 5  },
+          { x: this.right - 22, y: this.top    + 22 },
+          { x: this.left  + 22, y: this.bottom - 22 },
+          { x: this.tX,         y: this.bottom + 5  },
+          { x: this.right - 22, y: this.bottom - 22 },
         ];
-
-        // Draw pockets
-        this.pockets.forEach(({ x, y }) => {
-          this.add.circle(x, y, pr + 4, 0x000000);
-          this.add.circle(x, y, pr, 0x111111);
-          // Pocket ring
-          const ring = this.add.graphics();
-          ring.lineStyle(2, 0x3b1f0a, 0.8);
-          ring.strokeCircle(x, y, pr + 2);
+        this.pocketPositions.forEach(p => {
+          this.add.image(p.x, p.y, "pocket").setDepth(2);
         });
 
-        // Ball colors (solid 1-7, 8-ball, stripe 9-15)
-        const ballColors = [
-          0xf5c842, // 1 yellow
-          0x1a3fcc, // 2 blue
-          0xd42020, // 3 red
-          0x7b1fa2, // 4 purple
-          0xe65c00, // 5 orange
-          0x2e7d32, // 6 green
-          0x8d1515, // 7 maroon
-          0x111111, // 8 black
-          0xf5c842, // 9 yellow stripe
-          0x1a3fcc, // 10 blue stripe
-          0xd42020, // 11 red stripe
-          0x7b1fa2, // 12 purple stripe
-          0xe65c00, // 13 orange stripe
-          0x2e7d32, // 14 green stripe
-          0x8d1515, // 15 maroon stripe
-        ];
+        // cue ball
+        this.genBallTex(0);
+        this.cueBall = this.physics.add.image(this.left + this.tW * 0.25, this.tY, "cueball");
+        this.setupBall(this.cueBall);
+        this.cueBall.num = 0;
 
-        // Generate textures
-        this.generateCueBallTexture();
-        ballColors.forEach((color, i) => {
-          this.generateBallTexture(`ball${i + 1}`, color, i + 1);
-        });
-
-        // Cue ball
-        this.cueBall = this.physics.add.image(left + tableW * 0.27, tableY, "cueBall");
-        this.cueBall.setCircle(13, 0, 0);
-        this.cueBall.setBounce(0.78);
-        this.cueBall.setCollideWorldBounds(true);
-        this.cueBall.setDamping(true);
-        this.cueBall.setDrag(0.97);
-        this.cueBall.ballNumber = 0;
-
-        // Rack 15 balls in triangle
+        // rack
         this.balls = [];
-        const rackX = left + tableW * 0.67;
-        const rackY = tableY;
-        const bSpacing = 27;
-
-        // Triangle order with 8-ball in center
-        const rackOrder = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15];
+        const rackX = this.left + this.tW * 0.65;
+        const order = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15];
         let idx = 0;
         for (let row = 0; row < 5; row++) {
           for (let col = 0; col <= row; col++) {
-            const bx = rackX + row * bSpacing * 0.866;
-            const by = rackY + (col - row / 2) * bSpacing;
-            const num = rackOrder[idx];
-            const ball = this.physics.add.image(bx, by, `ball${num}`);
-            ball.setCircle(13, 0, 0);
-            ball.setBounce(0.78);
-            ball.setCollideWorldBounds(true);
-            ball.setDamping(true);
-            ball.setDrag(0.97);
-            ball.ballNumber = num;
-            this.balls.push(ball);
-            idx++;
+            const bx = rackX + row * 24 * 0.87;
+            const by = this.tY + (col - row / 2) * 25;
+            const num = order[idx++];
+            this.genBallTex(num);
+            const b = this.physics.add.image(bx, by, `b${num}`);
+            this.setupBall(b);
+            b.num = num;
+            this.balls.push(b);
           }
         }
 
-        // Colliders
+        // colliders
         this.physics.add.collider(this.cueBall, this.balls);
-        for (let i = 0; i < this.balls.length; i++) {
-          for (let j = i + 1; j < this.balls.length; j++) {
+        for (let i = 0; i < this.balls.length; i++)
+          for (let j = i + 1; j < this.balls.length; j++)
             this.physics.add.collider(this.balls[i], this.balls[j]);
-          }
-        }
 
-        // Aim graphics
-        this.aimGraphics = this.add.graphics();
-        this.cueStick = this.add.graphics();
+        // graphics layers
+        this.aimGfx  = this.add.graphics().setDepth(10);
+        this.cueGfx  = this.add.graphics().setDepth(10);
 
-        // Input
-        this.input.on("pointerdown", this.onPointerDown, this);
-        this.input.on("pointermove", this.onPointerMove, this);
-        this.input.on("pointerup", this.onPointerUp, this);
+        // input
+        this.input.on("pointerdown",  this.onDown,  this);
+        this.input.on("pointermove",  this.onMove,  this);
+        this.input.on("pointerup",    this.onUp,    this);
 
-        // Particle emitter for pocketing
-        this.sparkGraphics = this.add.graphics();
+        this.pushUi({ message: "Break! Player 1's turn" });
       }
 
-      onPointerDown(pointer) {
-        if (this.ballsMoving || this.shotFired) return;
+      setupBall(b) {
+        b.setCircle(13, 1, 1);
+        b.setBounce(0.75);
+        b.setCollideWorldBounds(true);
+        b.setDamping(true);
+        b.setDrag(0.975);
+        b.setDepth(5);
+        b.setMaxVelocity(900);
+      }
+
+      buildTable() {
+        const { tX, tY, tW, tH } = this;
+        // outer shadow
+        const shadow = this.add.graphics();
+        shadow.fillStyle(0x000000, 0.6);
+        shadow.fillRect(tX - tW/2 - 30 + 8, tY - tH/2 - 30 + 8, tW + 60, tH + 60);
+
+        // rail dark wood
+        this.add.rectangle(tX, tY, tW + 64, tH + 64, 0x3d1c08);
+        // rail highlight
+        this.add.rectangle(tX, tY, tW + 52, tH + 52, 0x5c2e10);
+        // inner rail
+        this.add.rectangle(tX, tY, tW + 38, tH + 38, 0x3d1c08);
+
+        // felt — teal like the reference image
+        this.add.rectangle(tX, tY, tW, tH, 0x1a8080);
+
+        // felt lines subtle
+        const fl = this.add.graphics();
+        fl.lineStyle(1, 0x158080, 0.3);
+        for (let x = tX - tW/2; x <= tX + tW/2; x += 30)
+          fl.lineBetween(x, tY - tH/2, x, tY + tH/2);
+        for (let y = tY - tH/2; y <= tY + tH/2; y += 30)
+          fl.lineBetween(tX - tW/2, y, tX + tW/2, y);
+
+        // center spot
+        this.add.circle(tX, tY, 4, 0xffffff, 0.25);
+        // head string dot
+        this.add.circle(tX - tW * 0.25, tY, 4, 0xffffff, 0.2);
+      }
+
+      // ── input ─────────────────────────────────────────────────────────────────
+      onDown(ptr) {
+        if (this.shooting || this.winner) return;
         this.isDragging = true;
-        this.dragStart = { x: pointer.x, y: pointer.y };
+        this.dragOrigin = { x: ptr.x, y: ptr.y };
       }
-
-      onPointerMove(pointer) {
-        if (!this.isDragging || this.ballsMoving) return;
-        const dx = this.cueBall.x - pointer.x;
-        const dy = this.cueBall.y - pointer.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        this.power = Math.min(dist / 2, 100);
-
-        // Update UI
-        setGameState(s => ({ ...s, power: Math.round(this.power) }));
-
-        this.drawAim(pointer);
+      onMove(ptr) {
+        if (!this.isDragging || this.shooting) return;
+        const dx = this.cueBall.x - ptr.x;
+        const dy = this.cueBall.y - ptr.y;
+        this.power = Math.min(Math.sqrt(dx*dx+dy*dy) / 2.2, 100);
+        setUi(s => ({ ...s, power: Math.round(this.power) }));
+        this.drawAim(ptr);
       }
-
-      onPointerUp(pointer) {
-        if (!this.isDragging || this.ballsMoving) return;
+      onUp(ptr) {
+        if (!this.isDragging || this.shooting) return;
         this.isDragging = false;
-
-        const dx = this.cueBall.x - pointer.x;
-        const dy = this.cueBall.y - pointer.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 5) {
-          this.aimGraphics.clear();
-          this.cueStick.clear();
-          return;
-        }
-
-        const speed = Math.min(dist * 4.5, 900);
-        const angle = Math.atan2(dy, dx);
-        this.cueBall.setVelocity(
-          Math.cos(angle) * speed,
-          Math.sin(angle) * speed
-        );
-
+        const dx = this.cueBall.x - ptr.x;
+        const dy = this.cueBall.y - ptr.y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        this.aimGfx.clear(); this.cueGfx.clear();
+        if (dist < 8) return;
+        const spd = Math.min(dist * 5, 950);
+        const a = Math.atan2(dy, dx);
+        this.cueBall.setVelocity(Math.cos(a)*spd, Math.sin(a)*spd);
+        this.shooting = true;
         this.shotFired = true;
-        this.ballsMoving = true;
-        this.aimGraphics.clear();
-        this.cueStick.clear();
-        setGameState(s => ({
-          ...s,
-          power: 0,
-          shooting: true,
-          message: "Ball in motion…"
-        }));
+        this.pottedThisTurn = [];
+        setUi(s => ({ ...s, ballsMoving: true, power: 0, message: "In motion…" }));
       }
 
-      drawAim(pointer) {
-        this.aimGraphics.clear();
-        this.cueStick.clear();
+      drawAim(ptr) {
+        this.aimGfx.clear();
+        this.cueGfx.clear();
+        const cx = this.cueBall.x, cy = this.cueBall.y;
+        const dx = cx - ptr.x, dy = cy - ptr.y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if (dist < 2) return;
+        const nx = dx/dist, ny = dy/dist;
 
-        const cx = this.cueBall.x;
-        const cy = this.cueBall.y;
-        const dx = cx - pointer.x;
-        const dy = cy - pointer.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const nx = dx / dist;
-        const ny = dy / dist;
-
-        // Aim dotted line
-        this.aimGraphics.lineStyle(1.5, 0xffffff, 0.5);
-        for (let i = 0; i < 8; i++) {
-          const s = cx + nx * (20 + i * 25);
-          const e = cx + nx * (35 + i * 25);
-          const sy2 = cy + ny * (20 + i * 25);
-          const ey2 = cy + ny * (35 + i * 25);
-          this.aimGraphics.lineBetween(s, sy2, e, ey2);
+        // dotted guide line
+        this.aimGfx.lineStyle(1.5, 0xffffff, 0.55);
+        for (let i = 1; i < 10; i++) {
+          const s = 18 + i*22, e = s+14;
+          this.aimGfx.lineBetween(cx+nx*s, cy+ny*s, cx+nx*e, cy+ny*e);
         }
 
-        // Power color
-        const t = this.power / 100;
-        const r = Math.round(255 * t);
-        const g2 = Math.round(255 * (1 - t));
-        const powerColor = (r << 16) | (g2 << 8);
+        // aim ring at cue ball
+        this.aimGfx.lineStyle(1.5, 0xffffff, 0.7);
+        this.aimGfx.strokeCircle(cx, cy, 16);
 
-        // Cue stick
-        const cueOffset = 18 + this.power * 0.3;
-        const cueLen = 130;
-        const cueStartX = cx - nx * cueOffset;
-        const cueStartY = cy - ny * cueOffset;
-        const cueEndX = cx - nx * (cueOffset + cueLen);
-        const cueEndY = cy - ny * (cueOffset + cueLen);
-
-        this.cueStick.lineStyle(6, 0xd4a017, 0.9);
-        this.cueStick.lineBetween(cueStartX, cueStartY, cueEndX - nx * 40, cueEndY - ny * 40);
-        this.cueStick.lineStyle(10, 0x8B4513, 0.9);
-        this.cueStick.lineBetween(cueEndX - nx * 40, cueEndY - ny * 40, cueEndX, cueEndY);
-
-        // Power dot on cue ball
-        this.aimGraphics.fillStyle(powerColor, 0.8);
-        this.aimGraphics.fillCircle(cx, cy, 5 + this.power * 0.1);
+        // cue stick — rendered as diagonal on the table like reference
+        const pullback = 16 + this.power * 0.35;
+        const tipX = cx - nx * pullback;
+        const tipY = cy - ny * pullback;
+        // thin gold tip
+        this.cueGfx.lineStyle(4, 0xd4aa20, 1);
+        this.cueGfx.lineBetween(tipX, tipY, cx - nx*(pullback+40), cy - ny*(pullback+40));
+        // main shaft
+        this.cueGfx.lineStyle(7, 0xc8901a, 0.95);
+        this.cueGfx.lineBetween(cx - nx*(pullback+40), cy - ny*(pullback+40),
+                                 cx - nx*(pullback+130), cy - ny*(pullback+130));
+        // handle
+        this.cueGfx.lineStyle(9, 0x7a4010, 0.9);
+        this.cueGfx.lineBetween(cx - nx*(pullback+130), cy - ny*(pullback+130),
+                                 cx - nx*(pullback+200), cy - ny*(pullback+200));
       }
 
-      checkBallsStopped() {
-        const allBalls = [this.cueBall, ...this.balls].filter(b => b.active);
-        return allBalls.every(b => {
-          const vx = b.body ? b.body.velocity.x : 0;
-          const vy = b.body ? b.body.velocity.y : 0;
-          return Math.abs(vx) < 3 && Math.abs(vy) < 3;
-        });
-      }
-
+      // ── update ────────────────────────────────────────────────────────────────
       update() {
-        if (!this.ballsMoving) return;
+        if (!this.shooting) return;
 
-        // Force-apply friction
-        const allActive = [this.cueBall, ...this.balls].filter(b => b.active);
-        allActive.forEach(b => {
-          if (b.body) {
-            b.body.velocity.x *= 0.993;
-            b.body.velocity.y *= 0.993;
+        // friction
+        [this.cueBall, ...this.balls].forEach(b => {
+          if (b.active && b.body) {
+            b.body.velocity.x *= 0.991;
+            b.body.velocity.y *= 0.991;
           }
         });
 
-        // Check pockets
-        [...this.balls].forEach(ball => {
-          if (!ball.active) return;
-          this.pockets.forEach(({ x, y }) => {
-            const d = Phaser.Math.Distance.Between(ball.x, ball.y, x, y);
-            if (d < 24) {
-              this.pocketBall(ball);
-            }
-          });
+        // pocket check — all balls
+        this.balls.forEach(b => {
+          if (!b.active) return;
+          if (this.pocketPositions.some(p => Phaser.Math.Distance.Between(b.x,b.y,p.x,p.y) < 25)) {
+            this.pocketBall(b);
+          }
         });
 
-        // Cue ball pocket
-        if (this.cueBall.active) {
-          this.pockets.forEach(({ x, y }) => {
-            const d = Phaser.Math.Distance.Between(this.cueBall.x, this.cueBall.y, x, y);
-            if (d < 24) {
-              this.scratchBall();
-            }
+        // cue ball pocket = scratch
+        if (this.cueBall.active &&
+            this.pocketPositions.some(p => Phaser.Math.Distance.Between(this.cueBall.x,this.cueBall.y,p.x,p.y) < 25)) {
+          this.scratch();
+        }
+
+        // stopped?
+        const moving = [this.cueBall, ...this.balls].filter(b => b.active);
+        const allStop = moving.every(b => Math.abs(b.body.velocity.x) < 2.5 && Math.abs(b.body.velocity.y) < 2.5);
+        if (allStop && this.shotFired) {
+          this.shotFired = false;
+          this.shooting = false;
+          this.resolveTurn();
+        }
+      }
+
+      pocketBall(b) {
+        b.disableBody(true, true);
+        this.pottedThisTurn.push(b.num);
+        this.pottedByPlayer[this.currentPlayer].push(b.num);
+
+        // assign type if not set
+        if (b.num !== 8 && !this.playerType[this.currentPlayer]) {
+          const type = b.num <= 7 ? "solids" : "stripes";
+          this.playerType[this.currentPlayer] = type;
+          this.playerType[this.currentPlayer === 1 ? 2 : 1] = type === "solids" ? "stripes" : "solids";
+        }
+
+        this.scores[this.currentPlayer]++;
+
+        if (b.num === 8) {
+          // win if all their balls done
+          const myType = this.playerType[this.currentPlayer];
+          const myRange = myType === "solids" ? [1,7] : [9,15];
+          const remaining = this.balls.filter(x => x.active && x.num >= myRange[0] && x.num <= myRange[1]);
+          if (remaining.length === 0) {
+            this.winner = this.currentPlayer;
+          } else {
+            // scratch — potted 8 early
+            this.winner = this.currentPlayer === 1 ? 2 : 1;
+          }
+          this.pushUi({
+            winner: this.winner,
+            message: `🏆 Player ${this.winner} wins!`,
           });
         }
-
-        if (this.checkBallsStopped() && this.shotFired) {
-          this.shotFired = false;
-          this.ballsMoving = false;
-          this.switchTurn();
-        }
+        this.syncScores();
       }
 
-      pocketBall(ball) {
-        ball.disableBody(true, true);
-        this.scores[this.currentPlayer] = (this.scores[this.currentPlayer] || 0) + 1;
-
-        setGameState(s => ({
-          ...s,
-          p1Score: this.scores[1],
-          p2Score: this.scores[2],
-          message: `Player ${this.currentPlayer} pocketed ball ${ball.ballNumber}! 🎱`,
-        }));
-
-        // Check 8-ball
-        if (ball.ballNumber === 8) {
-          const winner = this.currentPlayer;
-          setGameState(s => ({
-            ...s,
-            winner,
-            message: `🏆 Player ${winner} wins by pocketing the 8-ball!`,
-          }));
-          this.ballsMoving = false;
-          this.shotFired = false;
-        }
-      }
-
-      scratchBall() {
+      scratch() {
         this.cueBall.disableBody(true, true);
-        setGameState(s => ({
-          ...s,
-          message: `Scratch! Player ${this.currentPlayer === 1 ? 2 : 1} gets ball-in-hand.`,
-        }));
-
-        // Respawn cue ball after delay
-        this.time.delayedCall(800, () => {
-          const left = 500 - 430;
-          this.cueBall.enableBody(true, left + 200, 300, true, true);
+        this.time.delayedCall(700, () => {
+          this.cueBall.enableBody(true, this.left + this.tW * 0.25, this.tY, true, true);
           this.cueBall.setVelocity(0, 0);
-          this.ballsMoving = false;
+          this.shooting = false;
           this.shotFired = false;
-          this.switchTurn(true);
+          const next = this.currentPlayer === 1 ? 2 : 1;
+          this.currentPlayer = next;
+          this.pushUi({ turn: next, message: `Scratch! Player ${next} — ball in hand` });
         });
       }
 
-      switchTurn(keepPlayer = false) {
-        if (!keepPlayer) {
-          this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
-        }
-        setGameState(s => ({
+      resolveTurn() {
+        if (this.winner) return;
+        // if potted own balls, stay on
+        const myType = this.playerType[this.currentPlayer];
+        const pottedOwn = this.pottedThisTurn.some(n => {
+          if (!myType) return n !== 8;
+          return myType === "solids" ? (n >= 1 && n <= 7) : (n >= 9 && n <= 15);
+        });
+        const next = pottedOwn ? this.currentPlayer : (this.currentPlayer === 1 ? 2 : 1);
+        this.currentPlayer = next;
+        this.pushUi({
+          turn: next,
+          ballsMoving: false,
+          message: `Player ${next}'s turn`,
+        });
+      }
+
+      syncScores() {
+        setUi(s => ({
           ...s,
-          turn: this.currentPlayer,
-          shooting: false,
-          message: `Player ${this.currentPlayer}'s Turn — Aim and shoot!`,
+          p1: { ...s.p1, score: this.scores[1], potted: [...this.pottedByPlayer[1]], type: this.playerType[1] },
+          p2: { ...s.p2, score: this.scores[2], potted: [...this.pottedByPlayer[2]], type: this.playerType[2] },
         }));
+      }
+
+      pushUi(patch) {
+        this.syncScores();
+        setUi(s => ({ ...s, ...patch }));
       }
     }
 
@@ -416,8 +393,8 @@ export default function PoolGame() {
       type: Phaser.AUTO,
       width: 1000,
       height: 600,
-      parent: "pool-container",
-      backgroundColor: "#0d0d14",
+      parent: mountRef.current,
+      backgroundColor: "#0d1117",
       physics: {
         default: "arcade",
         arcade: { debug: false, gravity: { x: 0, y: 0 } },
@@ -426,206 +403,226 @@ export default function PoolGame() {
     };
 
     gameRef.current = new Phaser.Game(config);
-
-    return () => {
-      gameRef.current?.destroy(true);
-      gameRef.current = null;
-      sceneRef.current = null;
-    };
+    return () => { gameRef.current?.destroy(true); gameRef.current = null; };
   }, []);
 
-  const resetGame = () => {
-    if (gameRef.current) {
-      gameRef.current.destroy(true);
-      gameRef.current = null;
-      sceneRef.current = null;
-    }
-    setGameState({
-      turn: 1, p1Score: 0, p2Score: 0,
-      message: "Player 1's Turn — Click & drag to aim",
-      power: 0, shooting: false, winner: null,
-    });
-    setTimeout(() => {
-      // Re-trigger effect by forcing remount — handled by key prop trick
-      window.location.reload();
-    }, 100);
+  // ── UI helpers ──────────────────────────────────────────────────────────────
+  const BallIcon = ({ num, size = 20 }) => {
+    const color = num === 0 ? "#fff" : `#${BALL_COLORS[num].toString(16).padStart(6, "0")}`;
+    const stripe = num >= 9;
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: "50%",
+        background: stripe
+          ? `linear-gradient(180deg, white 30%, ${color} 30%, ${color} 70%, white 70%)`
+          : color,
+        border: "1.5px solid rgba(255,255,255,0.3)",
+        boxShadow: `0 0 4px ${color}66`,
+        flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: size * 0.38 + "px",
+        color: num === 8 || num === 0 ? "#fff" : "#fff",
+        fontWeight: "bold",
+        textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+      }}>
+        {num > 0 ? num : ""}
+      </div>
+    );
+  };
+
+  const PlayerPanel = ({ player, data, isActive }) => (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      background: isActive ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.3)",
+      border: `2px solid ${isActive ? "#4ade80" : "rgba(255,255,255,0.1)"}`,
+      borderRadius: 12, padding: "8px 14px",
+      transition: "all 0.3s",
+      minWidth: 200,
+    }}>
+      {/* Avatar */}
+      <div style={{
+        width: 42, height: 42, borderRadius: "50%",
+        background: player === 1 ? "linear-gradient(135deg,#e06010,#c04000)" : "linear-gradient(135deg,#1a4fcc,#0a2f8c)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 20, border: `2px solid ${isActive ? "#4ade80" : "rgba(255,255,255,0.2)"}`,
+        flexShrink: 0,
+      }}>
+        {player === 1 ? "🧑" : "👤"}
+      </div>
+      <div>
+        <div style={{ color: isActive ? "#4ade80" : "#ccc", fontWeight: "bold", fontSize: 13, letterSpacing: 1 }}>
+          {data.name}
+        </div>
+        <div style={{ color: "#aaa", fontSize: 11 }}>
+          {data.type ? `${data.type}` : "unassigned"} · {data.score} balls
+        </div>
+      </div>
+      {/* Score badge */}
+      <div style={{
+        marginLeft: "auto",
+        background: isActive ? "#4ade80" : "rgba(255,255,255,0.15)",
+        color: isActive ? "#000" : "#fff",
+        borderRadius: 8, padding: "4px 10px",
+        fontWeight: "bold", fontSize: 18,
+      }}>
+        {data.score}
+      </div>
+    </div>
+  );
+
+  // Potted rack — vertical strip on the right
+  const PottedRack = ({ p1, p2 }) => {
+    const allPotted = [
+      ...p1.potted.map(n => ({ n, player: 1 })),
+      ...p2.potted.map(n => ({ n, player: 2 })),
+    ].sort((a, b) => a.n - b.n);
+
+    return (
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        gap: 6,
+        background: "rgba(0,0,0,0.55)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 12,
+        padding: "10px 8px",
+        minHeight: 200,
+        minWidth: 46,
+      }}>
+        <div style={{ color: "#888", fontSize: 9, letterSpacing: 1, marginBottom: 4, writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
+          POTTED
+        </div>
+        {allPotted.length === 0 && (
+          <div style={{ color: "#444", fontSize: 10, textAlign: "center" }}>—</div>
+        )}
+        {allPotted.map((item, i) => (
+          <div key={i} style={{ position: "relative" }}>
+            <BallIcon num={item.n} size={28} />
+            <div style={{
+              position: "absolute", top: -3, right: -3,
+              width: 10, height: 10, borderRadius: "50%",
+              background: item.player === 1 ? "#e06010" : "#1a4fcc",
+              border: "1px solid #fff",
+            }} />
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #0a0a12 0%, #12101e 100%)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
+      background: "linear-gradient(160deg, #0d1117 0%, #12151e 100%)",
+      display: "flex", flexDirection: "column", alignItems: "center",
       justifyContent: "center",
-      fontFamily: "'Georgia', serif",
-      padding: "20px",
+      fontFamily: "'Georgia', 'Times New Roman', serif",
+      userSelect: "none",
+      padding: "16px",
     }}>
-      {/* Header */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        marginBottom: "16px",
-      }}>
-        <span style={{ fontSize: "2rem" }}>🎱</span>
+
+      {/* Title */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <span style={{ fontSize: "1.6rem" }}>🎱</span>
         <h1 style={{
-          margin: 0,
-          fontSize: "2rem",
-          fontWeight: "bold",
-          letterSpacing: "3px",
-          color: "#e8c97a",
-          textShadow: "0 0 20px rgba(232,201,122,0.4)",
-          textTransform: "uppercase",
-        }}>
-          TheCueArena
-        </h1>
-        <span style={{ fontSize: "2rem" }}>🎱</span>
+          margin: 0, fontSize: "1.7rem", letterSpacing: 4,
+          color: "#e8c97a", textTransform: "uppercase",
+          textShadow: "0 0 18px rgba(232,201,122,0.5)",
+        }}>TheCueArena</h1>
+        <span style={{ fontSize: "1.6rem" }}>🎱</span>
       </div>
 
-      {/* Scoreboard */}
+      {/* Top HUD — like the reference image */}
       <div style={{
-        display: "flex",
-        gap: "24px",
-        marginBottom: "12px",
-        alignItems: "center",
+        display: "flex", alignItems: "center", gap: 16,
+        marginBottom: 10, width: "100%", maxWidth: 1060,
+        justifyContent: "space-between",
       }}>
-        {[1, 2].map(p => (
-          <div key={p} style={{
-            background: gameState.turn === p && !gameState.winner
-              ? "linear-gradient(135deg, #1a3a1a, #0f5c2e)"
-              : "rgba(255,255,255,0.05)",
-            border: gameState.turn === p && !gameState.winner
-              ? "2px solid #4ade80"
-              : "2px solid rgba(255,255,255,0.1)",
-            borderRadius: "12px",
-            padding: "10px 24px",
-            textAlign: "center",
-            transition: "all 0.3s ease",
-            minWidth: "100px",
+        <PlayerPanel player={1} data={ui.p1} isActive={ui.turn === 1 && !ui.winner} />
+
+        {/* Center info */}
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <div style={{
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 10, padding: "8px 16px",
+            color: ui.winner ? "#fbbf24" : "#e2e8f0",
+            fontSize: 13, letterSpacing: 0.5,
+            marginBottom: 6,
           }}>
-            <div style={{ color: "#aaa", fontSize: "0.75rem", letterSpacing: "2px", marginBottom: "4px" }}>
-              PLAYER {p}
-            </div>
+            {ui.message}
+          </div>
+          {/* Power bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+            <span style={{ color: "#666", fontSize: 10, letterSpacing: 1 }}>PWR</span>
             <div style={{
-              color: gameState.turn === p ? "#4ade80" : "#e8c97a",
-              fontSize: "2rem",
-              fontWeight: "bold",
-              lineHeight: 1,
+              width: 140, height: 8, background: "rgba(255,255,255,0.1)",
+              borderRadius: 4, overflow: "hidden",
             }}>
-              {p === 1 ? gameState.p1Score : gameState.p2Score}
+              <div style={{
+                width: `${ui.power}%`, height: "100%",
+                background: ui.power > 70 ? "#ef4444" : ui.power > 40 ? "#f59e0b" : "#22c55e",
+                borderRadius: 4, transition: "width 0.04s",
+              }} />
             </div>
+            <span style={{ color: "#e8c97a", fontSize: 11, minWidth: 28 }}>{ui.power}%</span>
           </div>
-        ))}
-
-        {/* Power meter */}
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "4px",
-        }}>
-          <div style={{ color: "#aaa", fontSize: "0.7rem", letterSpacing: "2px" }}>POWER</div>
-          <div style={{
-            width: "120px",
-            height: "12px",
-            background: "rgba(255,255,255,0.1)",
-            borderRadius: "6px",
-            overflow: "hidden",
-            border: "1px solid rgba(255,255,255,0.15)",
-          }}>
-            <div style={{
-              width: `${gameState.power}%`,
-              height: "100%",
-              background: `linear-gradient(90deg, #22c55e, ${gameState.power > 70 ? "#ef4444" : gameState.power > 40 ? "#f59e0b" : "#22c55e"})`,
-              transition: "width 0.05s",
-              borderRadius: "6px",
-            }} />
-          </div>
-          <div style={{ color: "#e8c97a", fontSize: "0.8rem" }}>{gameState.power}%</div>
         </div>
+
+        <PlayerPanel player={2} data={ui.p2} isActive={ui.turn === 2 && !ui.winner} />
       </div>
 
-      {/* Status message */}
-      <div style={{
-        marginBottom: "10px",
-        padding: "8px 20px",
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: "8px",
-        border: "1px solid rgba(255,255,255,0.1)",
-        color: gameState.winner ? "#fbbf24" : "#e2e8f0",
-        fontSize: "0.9rem",
-        letterSpacing: "0.5px",
-        textAlign: "center",
-        minWidth: "360px",
-      }}>
-        {gameState.message}
-      </div>
-
-      {/* Game canvas */}
-      <div style={{
-        borderRadius: "16px",
-        overflow: "hidden",
-        boxShadow: "0 0 60px rgba(0,0,0,0.8), 0 0 20px rgba(232,201,122,0.1)",
-        border: "2px solid rgba(232,201,122,0.2)",
-      }}>
-        <div id="pool-container" />
-      </div>
-
-      {/* Controls hint */}
-      <div style={{
-        marginTop: "12px",
-        display: "flex",
-        gap: "24px",
-        color: "#555",
-        fontSize: "0.75rem",
-        letterSpacing: "1px",
-      }}>
-        <span>🖱️ CLICK & DRAG from cue ball to aim</span>
-        <span>⬆️ FARTHER = MORE POWER</span>
-        <span>🎯 RELEASE to shoot</span>
-      </div>
-
-      {/* Winner overlay / Reset */}
-      {gameState.winner && (
+      {/* Game area: canvas + potted rack on the right */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.75)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 100,
+          borderRadius: 14, overflow: "hidden",
+          boxShadow: "0 0 50px rgba(0,0,0,0.8), 0 0 16px rgba(232,201,122,0.08)",
+          border: "2px solid rgba(232,201,122,0.15)",
+        }}>
+          <div ref={mountRef} />
+        </div>
+
+        {/* ← arrow points here: potted ball rack on the right side */}
+        <PottedRack p1={ui.p1} p2={ui.p2} />
+      </div>
+
+      {/* Hint bar */}
+      <div style={{
+        marginTop: 10, display: "flex", gap: 20,
+        color: "#444", fontSize: 11, letterSpacing: 1,
+      }}>
+        <span>🖱 DRAG from cue ball</span>
+        <span>↔ DISTANCE = POWER</span>
+        <span>🖱 RELEASE to shoot</span>
+      </div>
+
+      {/* Winner overlay */}
+      {ui.winner && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999,
         }}>
           <div style={{
-            background: "linear-gradient(135deg, #1a1a2e, #16213e)",
-            border: "2px solid #e8c97a",
-            borderRadius: "20px",
-            padding: "48px 64px",
-            textAlign: "center",
+            background: "linear-gradient(135deg,#1a1a2e,#16213e)",
+            border: "2px solid #e8c97a", borderRadius: 20,
+            padding: "48px 64px", textAlign: "center",
             boxShadow: "0 0 80px rgba(232,201,122,0.3)",
           }}>
-            <div style={{ fontSize: "4rem", marginBottom: "16px" }}>🏆</div>
-            <h2 style={{ color: "#e8c97a", fontSize: "2.5rem", margin: "0 0 8px", letterSpacing: "2px" }}>
-              PLAYER {gameState.winner} WINS!
+            <div style={{ fontSize: "3.5rem", marginBottom: 12 }}>🏆</div>
+            <h2 style={{ color: "#e8c97a", fontSize: "2.2rem", margin: "0 0 8px", letterSpacing: 2 }}>
+              PLAYER {ui.winner} WINS!
             </h2>
-            <p style={{ color: "#aaa", marginBottom: "32px" }}>
-              Final Score — P1: {gameState.p1Score} | P2: {gameState.p2Score}
+            <p style={{ color: "#aaa", marginBottom: 28 }}>
+              P1: {ui.p1.score} potted · P2: {ui.p2.score} potted
             </p>
-            <button onClick={resetGame} style={{
-              background: "linear-gradient(135deg, #e8c97a, #c9a227)",
-              color: "#1a1a2e",
-              border: "none",
-              borderRadius: "10px",
-              padding: "14px 40px",
-              fontSize: "1.1rem",
-              fontWeight: "bold",
-              cursor: "pointer",
-              letterSpacing: "2px",
-              textTransform: "uppercase",
-            }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: "linear-gradient(135deg,#e8c97a,#c9a227)",
+                color: "#1a1a2e", border: "none", borderRadius: 10,
+                padding: "12px 36px", fontSize: "1rem",
+                fontWeight: "bold", cursor: "pointer",
+                letterSpacing: 2, textTransform: "uppercase",
+              }}>
               Play Again
             </button>
           </div>
