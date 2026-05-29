@@ -1,21 +1,89 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Phaser from "phaser";
 
-const BALL_COLORS = [
-  null,
-  0xf5c518, 0x1a4fcc, 0xd42020, 0x8b1aaa, 0xe06010,
-  0x1a8c2e, 0x8c1515, 0x111111,
-  0xf5c518, 0x1a4fcc, 0xd42020, 0x8b1aaa, 0xe06010,
-  0x1a8c2e, 0x8c1515,
+// Distinct colors — every ball is visually unique
+const BALL_DEF = [
+  { color: "#ffffff", label: "",   stripe: false }, // 0 cue
+  { color: "#f5c518", label: "1",  stripe: false }, // 1 yellow
+  { color: "#1a4fcc", label: "2",  stripe: false }, // 2 blue
+  { color: "#d42020", label: "3",  stripe: false }, // 3 red
+  { color: "#8b1aaa", label: "4",  stripe: false }, // 4 purple
+  { color: "#e06010", label: "5",  stripe: false }, // 5 orange
+  { color: "#1a8c2e", label: "6",  stripe: false }, // 6 green
+  { color: "#8c1515", label: "7",  stripe: false }, // 7 maroon
+  { color: "#111111", label: "8",  stripe: false }, // 8 black
+  { color: "#f5c518", label: "9",  stripe: true  }, // 9  yellow stripe
+  { color: "#1a4fcc", label: "10", stripe: true  }, // 10 blue stripe
+  { color: "#d42020", label: "11", stripe: true  }, // 11 red stripe
+  { color: "#8b1aaa", label: "12", stripe: true  }, // 12 purple stripe
+  { color: "#e06010", label: "13", stripe: true  }, // 13 orange stripe
+  { color: "#1a8c2e", label: "14", stripe: true  }, // 14 green stripe
+  { color: "#8c1515", label: "15", stripe: true  }, // 15 maroon stripe
 ];
 
 const TURN_SECONDS = 30;
+const SIZE = 32; // texture canvas size
+
+// Draw a ball onto an offscreen canvas and return it as a data-URL
+function drawBallCanvas(num) {
+  const def = BALL_DEF[num];
+  const c = document.createElement("canvas");
+  c.width = c.height = SIZE;
+  const ctx = c.getContext("2d");
+  const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 2;
+
+  // Drop shadow
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetY = 2;
+
+  if (def.stripe) {
+    // White base
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff"; ctx.fill();
+    // Colored stripe band (horizontal)
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = def.color;
+    ctx.fillRect(0, cy - r * 0.42, SIZE, r * 0.84);
+    ctx.restore();
+    // Re-draw border
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0,0,0,0.25)"; ctx.lineWidth = 1; ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = def.color; ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+  }
+  ctx.restore();
+
+  // Number badge (white circle)
+  if (num > 0) {
+    const br = num >= 10 ? 7.5 : 6.5;
+    ctx.beginPath(); ctx.arc(cx, cy, br, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff"; ctx.fill();
+    ctx.fillStyle = "#111111";
+    ctx.font = `bold ${num >= 10 ? 7 : 8}px Arial`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(def.label, cx, cy + 0.5);
+  }
+
+  // Specular highlight
+  const grad = ctx.createRadialGradient(cx - r*0.3, cy - r*0.35, 0, cx, cy, r);
+  grad.addColorStop(0, "rgba(255,255,255,0.55)");
+  grad.addColorStop(0.4, "rgba(255,255,255,0)");
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad; ctx.fill();
+
+  return c;
+}
 
 export default function PoolGame() {
-  const mountRef  = useRef(null);
-  const gameRef   = useRef(null);
-  const sceneRef  = useRef(null);
-  const timerRef  = useRef(null);
+  const mountRef = useRef(null);
+  const gameRef  = useRef(null);
+  const sceneRef = useRef(null);
+  const timerRef = useRef(null);
 
   const [ui, setUi] = useState({
     turn: 1,
@@ -29,70 +97,45 @@ export default function PoolGame() {
     p2Time: TURN_SECONDS,
   });
 
-  // ── turn timer ───────────────────────────────────────────────────────────────
   const startTimer = useCallback((player) => {
     clearInterval(timerRef.current);
     setUi(s => ({ ...s, p1Time: TURN_SECONDS, p2Time: TURN_SECONDS }));
-
     timerRef.current = setInterval(() => {
       setUi(s => {
         if (s.winner || s.ballsMoving) return s;
         const key = player === 1 ? "p1Time" : "p2Time";
-        const next = s[key] - 1;
-        if (next <= 0) {
+        const nxt = s[key] - 1;
+        if (nxt <= 0) {
           clearInterval(timerRef.current);
-          // Force turn switch via scene
           if (sceneRef.current) sceneRef.current.timeoutTurn();
           return { ...s, [key]: 0 };
         }
-        return { ...s, [key]: next };
+        return { ...s, [key]: nxt };
       });
     }, 1000);
   }, []);
 
-  const stopTimer = useCallback(() => {
-    clearInterval(timerRef.current);
-  }, []);
-
+  const stopTimer = useCallback(() => clearInterval(timerRef.current), []);
   useEffect(() => () => clearInterval(timerRef.current), []);
 
-  // ── Phaser game ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (gameRef.current || !mountRef.current) return;
 
     class PoolScene extends Phaser.Scene {
       constructor() { super("Pool"); }
 
-      // ── texture helpers ──────────────────────────────────────────────────────
-      makeTex(key, fn) {
-        if (this.textures.exists(key)) return;
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        fn(g);
-        g.generateTexture(key, 28, 28);
-        g.destroy();
-      }
-
-      genBallTex(num) {
-        const key = num === 0 ? "cueball" : `b${num}`;
-        const color = num === 0 ? 0xffffff : BALL_COLORS[num];
-        const stripe = num >= 9;
-        this.makeTex(key, g => {
-          g.fillStyle(0x000000, 0.25); g.fillCircle(15, 16, 12);
-          if (stripe) {
-            g.fillStyle(0xffffff, 1); g.fillCircle(14, 14, 12);
-            g.fillStyle(color, 1);
-            g.slice(14, 14, 12, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(230), false);
-            g.fillPath();
-          } else {
-            g.fillStyle(color, 1); g.fillCircle(14, 14, 12);
+      // ── Load ball canvases as Phaser textures ─────────────────────────────────
+      preload() {
+        for (let i = 0; i <= 15; i++) {
+          const key = i === 0 ? "cueball" : `b${i}`;
+          const canvas = drawBallCanvas(i);
+          // Add canvas as texture
+          if (!this.textures.exists(key)) {
+            this.textures.addCanvas(key, canvas);
           }
-          if (num > 0) { g.fillStyle(0xffffff, 0.9); g.fillCircle(14, 14, 5); }
-          g.fillStyle(0xffffff, 0.45); g.fillCircle(10, 9, 4);
-        });
-        return key;
+        }
       }
 
-      // ── create ───────────────────────────────────────────────────────────────
       create() {
         sceneRef.current = this;
 
@@ -105,7 +148,6 @@ export default function PoolGame() {
 
         this.physics.world.setBounds(this.left, this.top, this.tW, this.tH);
 
-        // game state
         this.currentPlayer  = 1;
         this.scores         = { 1: 0, 2: 0 };
         this.pottedByPlayer = { 1: [], 2: [] };
@@ -116,13 +158,18 @@ export default function PoolGame() {
         this.isDragging     = false;
         this.power          = 0;
         this.winner         = null;
-        // settling: count frames where all balls are slow
         this.settleFrames   = 0;
-        this.SETTLE_NEEDED  = 12; // must be slow for 12 consecutive frames
+        this.SETTLE_NEEDED  = 14;
+
+        // Cue stick animation state
+        this.cueAngle       = 0;
+        this.cueAnimating   = false;
+        this.cueAnimT       = 0;
+        this.cueAnimShot    = { nx: 0, ny: 0, power: 0 };
 
         this.buildTable();
 
-        // pockets
+        // Pockets
         this.pocketPositions = [
           { x: this.left  + 20, y: this.top    + 20 },
           { x: this.tX,         y: this.top    -  4 },
@@ -131,33 +178,29 @@ export default function PoolGame() {
           { x: this.tX,         y: this.bottom +  4 },
           { x: this.right - 20, y: this.bottom - 20 },
         ];
-        this.makeTex("pocket", g => {
-          g.fillStyle(0x000000, 1); g.fillCircle(14, 14, 14);
-          g.fillStyle(0x111111, 1); g.fillCircle(14, 14, 10);
+        const pocketGfx = this.add.graphics().setDepth(2);
+        this.pocketPositions.forEach(p => {
+          pocketGfx.fillStyle(0x000000, 1); pocketGfx.fillCircle(p.x, p.y, 18);
+          pocketGfx.fillStyle(0x0a0a0a, 1); pocketGfx.fillCircle(p.x, p.y, 14);
+          pocketGfx.lineStyle(2, 0x3d1c08, 1); pocketGfx.strokeCircle(p.x, p.y, 20);
         });
-        this.pocketPositions.forEach(p =>
-          this.add.image(p.x, p.y, "pocket").setDepth(2)
-        );
 
-        // balls
-        this.genBallTex(0);
+        // Cue ball
         this.cueBall = this.physics.add.image(this.left + this.tW * 0.25, this.tY, "cueball");
-        this.setupBall(this.cueBall);
-        this.cueBall.num = 0;
+        this.setupBall(this.cueBall); this.cueBall.num = 0;
 
+        // Rack
         this.balls = [];
-        const rackX = this.left + this.tW * 0.65;
-        const order = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15];
+        const rackX  = this.left + this.tW * 0.65;
+        const order  = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15];
         let idx = 0;
         for (let row = 0; row < 5; row++) {
           for (let col = 0; col <= row; col++) {
-            const bx = rackX + row * 24 * 0.87;
-            const by = this.tY + (col - row / 2) * 25;
+            const bx  = rackX + row * 24 * 0.87;
+            const by  = this.tY + (col - row / 2) * 26;
             const num = order[idx++];
-            this.genBallTex(num);
-            const b = this.physics.add.image(bx, by, `b${num}`);
-            this.setupBall(b);
-            b.num = num;
+            const b   = this.physics.add.image(bx, by, `b${num}`);
+            this.setupBall(b); b.num = num;
             this.balls.push(b);
           }
         }
@@ -167,8 +210,9 @@ export default function PoolGame() {
           for (let j = i + 1; j < this.balls.length; j++)
             this.physics.add.collider(this.balls[i], this.balls[j]);
 
-        this.aimGfx = this.add.graphics().setDepth(10);
-        this.cueGfx = this.add.graphics().setDepth(10);
+        // Graphics layers (aim BELOW cue, cue on top)
+        this.aimGfx = this.add.graphics().setDepth(9);
+        this.cueGfx = this.add.graphics().setDepth(11);
 
         this.input.on("pointerdown", this.onDown, this);
         this.input.on("pointermove", this.onMove, this);
@@ -179,10 +223,10 @@ export default function PoolGame() {
       }
 
       setupBall(b) {
-        b.setCircle(13, 1, 1);
+        const r = SIZE / 2 - 2;
+        b.setCircle(r, SIZE/2 - r, SIZE/2 - r);
         b.setBounce(0.72);
         b.setCollideWorldBounds(true);
-        // NO setDamping — we handle friction manually so we control exact stop
         b.setDrag(0);
         b.setDepth(5);
         b.setMaxVelocity(900);
@@ -190,96 +234,162 @@ export default function PoolGame() {
 
       buildTable() {
         const { tX, tY, tW, tH } = this;
-        const s = this.add.graphics();
-        s.fillStyle(0x000000, 0.55);
-        s.fillRect(tX - tW/2 - 22 + 8, tY - tH/2 - 22 + 8, tW + 44, tH + 44);
-        this.add.rectangle(tX, tY, tW + 64, tH + 64, 0x3d1c08);
-        this.add.rectangle(tX, tY, tW + 50, tH + 50, 0x5c2e10);
-        this.add.rectangle(tX, tY, tW + 36, tH + 36, 0x3d1c08);
+        const sh = this.add.graphics();
+        sh.fillStyle(0x000000, 0.5);
+        sh.fillRect(tX-tW/2-20+7, tY-tH/2-20+7, tW+40, tH+40);
+        this.add.rectangle(tX, tY, tW+66, tH+66, 0x3d1c08);
+        this.add.rectangle(tX, tY, tW+52, tH+52, 0x5c2e10);
+        this.add.rectangle(tX, tY, tW+38, tH+38, 0x3d1c08);
         this.add.rectangle(tX, tY, tW, tH, 0x1a8080);
         const fl = this.add.graphics();
-        fl.lineStyle(1, 0x158888, 0.25);
-        for (let x = tX - tW/2; x <= tX + tW/2; x += 30)
-          fl.lineBetween(x, tY - tH/2, x, tY + tH/2);
-        for (let y = tY - tH/2; y <= tY + tH/2; y += 30)
-          fl.lineBetween(tX - tW/2, y, tX + tW/2, y);
-        this.add.circle(tX, tY, 4, 0xffffff, 0.2);
-        this.add.circle(tX - tW * 0.25, tY, 4, 0xffffff, 0.15);
+        fl.lineStyle(1, 0x158888, 0.2);
+        for (let x = tX-tW/2; x <= tX+tW/2; x+=30) fl.lineBetween(x, tY-tH/2, x, tY+tH/2);
+        for (let y = tY-tH/2; y <= tY+tH/2; y+=30) fl.lineBetween(tX-tW/2, y, tX+tW/2, y);
+        this.add.circle(tX, tY, 4, 0xffffff, 0.18);
+        this.add.circle(tX-tW*0.25, tY, 4, 0xffffff, 0.14);
       }
 
-      // ── input ────────────────────────────────────────────────────────────────
+      // ── Input ─────────────────────────────────────────────────────────────────
       onDown(ptr) {
-        if (this.shooting || this.winner) return;
+        if (this.shooting || this.winner || this.cueAnimating) return;
         this.isDragging = true;
       }
       onMove(ptr) {
         if (!this.isDragging || this.shooting) return;
-        const dx = this.cueBall.x - ptr.x;
-        const dy = this.cueBall.y - ptr.y;
-        this.power = Math.min(Math.sqrt(dx*dx + dy*dy) / 2.2, 100);
+        const dx = this.cueBall.x - ptr.x, dy = this.cueBall.y - ptr.y;
+        this.power = Math.min(Math.sqrt(dx*dx+dy*dy) / 2.2, 100);
         setUi(s => ({ ...s, power: Math.round(this.power) }));
         this.drawAim(ptr);
       }
       onUp(ptr) {
         if (!this.isDragging || this.shooting) return;
         this.isDragging = false;
-        this.aimGfx.clear(); this.cueGfx.clear();
-        const dx = this.cueBall.x - ptr.x;
-        const dy = this.cueBall.y - ptr.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < 8) return;
+        const dx = this.cueBall.x - ptr.x, dy = this.cueBall.y - ptr.y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        this.aimGfx.clear();
+        if (dist < 8) { this.cueGfx.clear(); return; }
+
+        const nx = dx/dist, ny = dy/dist;
         const spd = Math.min(dist * 5, 950);
-        const a = Math.atan2(dy, dx);
-        this.cueBall.setVelocity(Math.cos(a)*spd, Math.sin(a)*spd);
-        this.shooting = true;
-        this.shotFired = true;
-        this.settleFrames = 0;
-        this.pottedThisTurn = [];
+
+        // Store for the shoot animation
+        this.cueAnimating   = true;
+        this.cueAnimT       = 0;
+        this.cueAnimShot    = { nx, ny, power: this.power, spd, cx: this.cueBall.x, cy: this.cueBall.y };
+
         stopTimer();
-        setUi(s => ({ ...s, ballsMoving: true, power: 0, message: "In motion…" }));
+        setUi(s => ({ ...s, power: 0, message: "In motion…" }));
       }
 
+      // ── Cue stick draw (aim phase) ────────────────────────────────────────────
       drawAim(ptr) {
         this.aimGfx.clear(); this.cueGfx.clear();
         const cx = this.cueBall.x, cy = this.cueBall.y;
         const dx = cx - ptr.x, dy = cy - ptr.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
+        const dist = Math.sqrt(dx*dx+dy*dy);
         if (dist < 2) return;
         const nx = dx/dist, ny = dy/dist;
-        this.aimGfx.lineStyle(1.5, 0xffffff, 0.5);
-        for (let i = 1; i < 10; i++) {
-          const s = 18 + i*22, e = s+14;
+
+        // Dotted guide line forward
+        this.aimGfx.lineStyle(1.5, 0xffffff, 0.45);
+        for (let i = 1; i < 12; i++) {
+          const s = 18 + i*22, e = s+13;
           this.aimGfx.lineBetween(cx+nx*s, cy+ny*s, cx+nx*e, cy+ny*e);
         }
-        this.aimGfx.lineStyle(1.5, 0xffffff, 0.65);
-        this.aimGfx.strokeCircle(cx, cy, 16);
-        const pull = 16 + this.power * 0.35;
-        this.cueGfx.lineStyle(4, 0xd4aa20, 1);
-        this.cueGfx.lineBetween(cx - nx*pull, cy - ny*pull,
-                                  cx - nx*(pull+40), cy - ny*(pull+40));
-        this.cueGfx.lineStyle(7, 0xc8901a, 0.95);
-        this.cueGfx.lineBetween(cx - nx*(pull+40), cy - ny*(pull+40),
-                                  cx - nx*(pull+130), cy - ny*(pull+130));
-        this.cueGfx.lineStyle(9, 0x7a4010, 0.9);
-        this.cueGfx.lineBetween(cx - nx*(pull+130), cy - ny*(pull+130),
-                                  cx - nx*(pull+220), cy - ny*(pull+220));
+        // Aim ring
+        this.aimGfx.lineStyle(1.5, 0xffffff, 0.6);
+        this.aimGfx.strokeCircle(cx, cy, SIZE/2 + 3);
+
+        this.drawCueStick(cx, cy, nx, ny, this.power, 1.0);
       }
 
-      // ── update ───────────────────────────────────────────────────────────────
-      update() {
+      // ── Shared cue stick renderer ─────────────────────────────────────────────
+      // pull: how far back the stick is pulled (px), alpha: opacity
+      drawCueStick(cx, cy, nx, ny, power, alpha) {
+        const pull  = 18 + power * 0.4; // pullback increases with power
+        const tipX  = cx - nx * pull;
+        const tipY  = cy - ny * pull;
+
+        // Ferrule (white tip band)
+        this.cueGfx.lineStyle(5, 0xeeeeee, alpha);
+        this.cueGfx.lineBetween(tipX, tipY,
+          cx - nx*(pull+8), cy - ny*(pull+8));
+
+        // Shaft (light maple)
+        this.cueGfx.lineStyle(5, 0xe8c87a, alpha);
+        this.cueGfx.lineBetween(
+          cx - nx*(pull+8),  cy - ny*(pull+8),
+          cx - nx*(pull+90), cy - ny*(pull+90));
+
+        // Mid wrap (darker wood)
+        this.cueGfx.lineStyle(7, 0xc8901a, alpha * 0.95);
+        this.cueGfx.lineBetween(
+          cx - nx*(pull+90),  cy - ny*(pull+90),
+          cx - nx*(pull+170), cy - ny*(pull+170));
+
+        // Butt (dark handle)
+        this.cueGfx.lineStyle(9, 0x6a3510, alpha * 0.9);
+        this.cueGfx.lineBetween(
+          cx - nx*(pull+170), cy - ny*(pull+170),
+          cx - nx*(pull+250), cy - ny*(pull+250));
+
+        // Butt cap
+        this.cueGfx.lineStyle(10, 0x3a1a08, alpha * 0.85);
+        this.cueGfx.lineBetween(
+          cx - nx*(pull+250), cy - ny*(pull+250),
+          cx - nx*(pull+265), cy - ny*(pull+265));
+      }
+
+      // ── Update ───────────────────────────────────────────────────────────────
+      update(time, delta) {
+        // ── Cue strike animation ─────────────────────────────────────────────
+        if (this.cueAnimating) {
+          this.cueAnimT += delta / 1000;
+          const { nx, ny, power, spd, cx, cy } = this.cueAnimShot;
+
+          // Phase 1 (0–0.08s): lunge forward (tip rushes toward ball)
+          // Phase 2 (0.08–0.22s): follow-through + fade
+          const LUNGE_DUR   = 0.075;
+          const FADEOUT_DUR = 0.14;
+
+          this.cueGfx.clear(); this.aimGfx.clear();
+
+          if (this.cueAnimT < LUNGE_DUR) {
+            // Move tip forward from pull position toward +4px past ball
+            const progress = this.cueAnimT / LUNGE_DUR; // 0→1
+            const currentPull = (18 + power * 0.4) * (1 - progress) - 4 * progress;
+            this.drawCueStick(cx, cy, nx, ny, Math.max(0, currentPull / 0.4 - 18/0.4) , 1.0);
+            // Actually just pass offset directly:
+            this._drawCueRaw(cx, cy, nx, ny, currentPull, 1.0);
+          } else {
+            // Phase 2 — fade out as cue retracts
+            const fadeProgress = (this.cueAnimT - LUNGE_DUR) / FADEOUT_DUR;
+            if (fadeProgress < 1.0) {
+              const retract = (18 + power * 0.4) * fadeProgress * 0.5;
+              this._drawCueRaw(cx, cy, nx, ny, retract, 1.0 - fadeProgress);
+            } else {
+              // Animation done — fire the ball
+              this.cueGfx.clear();
+              this.cueAnimating = false;
+              this.cueBall.setVelocity(nx * spd, ny * spd);
+              this.shooting     = true;
+              this.shotFired    = true;
+              this.settleFrames = 0;
+              this.pottedThisTurn = [];
+              setUi(s => ({ ...s, ballsMoving: true }));
+            }
+          }
+          return; // skip physics update during animation
+        }
+
         if (!this.shooting) return;
 
+        // ── Friction ──────────────────────────────────────────────────────────
         const allBalls = [this.cueBall, ...this.balls].filter(b => b.active && b.body);
-
-        // ── Manual friction (applied every frame) ──────────────────────────────
-        // Use a strong friction factor so balls actually slow to a stop
-        const FRICTION = 0.988;
-        const STOP_VEL = 6; // px/s threshold — below this we hard-zero the velocity
-
+        const FRICTION = 0.988, STOP_VEL = 6;
         allBalls.forEach(b => {
           b.body.velocity.x *= FRICTION;
           b.body.velocity.y *= FRICTION;
-          // Hard-zero micro velocities so balls don't creep forever
           if (Math.abs(b.body.velocity.x) < STOP_VEL) b.body.velocity.x = 0;
           if (Math.abs(b.body.velocity.y) < STOP_VEL) b.body.velocity.y = 0;
         });
@@ -287,36 +397,39 @@ export default function PoolGame() {
         // ── Pocket detection ──────────────────────────────────────────────────
         this.balls.forEach(b => {
           if (!b.active) return;
-          if (this.pocketPositions.some(p =>
-            Phaser.Math.Distance.Between(b.x, b.y, p.x, p.y) < 24))
+          if (this.pocketPositions.some(p => Phaser.Math.Distance.Between(b.x,b.y,p.x,p.y) < 22))
             this.pocketBall(b);
         });
-
         if (this.cueBall.active &&
-            this.pocketPositions.some(p =>
-              Phaser.Math.Distance.Between(this.cueBall.x, this.cueBall.y, p.x, p.y) < 24))
+            this.pocketPositions.some(p => Phaser.Math.Distance.Between(this.cueBall.x,this.cueBall.y,p.x,p.y) < 22))
           this.scratch();
 
-        // ── Settle detection (consecutive-frame counter) ──────────────────────
-        const allStopped = allBalls.every(b =>
-          b.body.velocity.x === 0 && b.body.velocity.y === 0
-        );
-
-        if (allStopped) {
-          this.settleFrames++;
-        } else {
-          this.settleFrames = 0; // reset if anything is still moving
-        }
-
+        // ── Settle detection ──────────────────────────────────────────────────
+        const allStopped = allBalls.every(b => b.body.velocity.x === 0 && b.body.velocity.y === 0);
+        if (allStopped) { this.settleFrames++; } else { this.settleFrames = 0; }
         if (this.settleFrames >= this.SETTLE_NEEDED && this.shotFired) {
-          this.shotFired  = false;
-          this.shooting   = false;
-          this.settleFrames = 0;
+          this.shotFired = false; this.shooting = false; this.settleFrames = 0;
           this.resolveTurn();
         }
       }
 
-      // ── game logic ───────────────────────────────────────────────────────────
+      // Raw cue draw with direct pullback offset in px
+      _drawCueRaw(cx, cy, nx, ny, pullPx, alpha) {
+        if (alpha <= 0) return;
+        const p = pullPx;
+        this.cueGfx.lineStyle(5, 0xeeeeee, alpha);
+        this.cueGfx.lineBetween(cx-nx*p, cy-ny*p, cx-nx*(p+8), cy-ny*(p+8));
+        this.cueGfx.lineStyle(5, 0xe8c87a, alpha);
+        this.cueGfx.lineBetween(cx-nx*(p+8), cy-ny*(p+8), cx-nx*(p+90), cy-ny*(p+90));
+        this.cueGfx.lineStyle(7, 0xc8901a, alpha*0.95);
+        this.cueGfx.lineBetween(cx-nx*(p+90), cy-ny*(p+90), cx-nx*(p+170), cy-ny*(p+170));
+        this.cueGfx.lineStyle(9, 0x6a3510, alpha*0.9);
+        this.cueGfx.lineBetween(cx-nx*(p+170), cy-ny*(p+170), cx-nx*(p+250), cy-ny*(p+250));
+        this.cueGfx.lineStyle(10, 0x3a1a08, alpha*0.85);
+        this.cueGfx.lineBetween(cx-nx*(p+250), cy-ny*(p+250), cx-nx*(p+265), cy-ny*(p+265));
+      }
+
+      // ── Game logic ────────────────────────────────────────────────────────────
       pocketBall(b) {
         b.disableBody(true, true);
         this.pottedThisTurn.push(b.num);
@@ -328,12 +441,10 @@ export default function PoolGame() {
         }
         this.scores[this.currentPlayer]++;
         if (b.num === 8) {
-          const myType  = this.playerType[this.currentPlayer];
+          const myType = this.playerType[this.currentPlayer];
           const [lo,hi] = myType === "solids" ? [1,7] : [9,15];
-          const remaining = this.balls.filter(x => x.active && x.num >= lo && x.num <= hi);
-          this.winner = remaining.length === 0
-            ? this.currentPlayer
-            : (this.currentPlayer === 1 ? 2 : 1);
+          const rem = this.balls.filter(x => x.active && x.num >= lo && x.num <= hi);
+          this.winner = rem.length === 0 ? this.currentPlayer : (this.currentPlayer===1?2:1);
           this.pushUi({ winner: this.winner, message: `🏆 Player ${this.winner} wins!` });
           stopTimer();
         }
@@ -342,17 +453,12 @@ export default function PoolGame() {
 
       scratch() {
         this.cueBall.disableBody(true, true);
-        this.shooting = false;
-        this.shotFired = false;
-        this.settleFrames = 0;
-        // Force stop all other balls too
-        this.balls.forEach(b => {
-          if (b.active && b.body) { b.body.velocity.x = 0; b.body.velocity.y = 0; }
-        });
+        this.shooting = false; this.shotFired = false; this.settleFrames = 0;
+        this.balls.forEach(b => { if (b.active && b.body) { b.body.velocity.x = 0; b.body.velocity.y = 0; }});
         this.time.delayedCall(700, () => {
-          this.cueBall.enableBody(true, this.left + this.tW * 0.25, this.tY, true, true);
+          this.cueBall.enableBody(true, this.left + this.tW*0.25, this.tY, true, true);
           this.cueBall.setVelocity(0, 0);
-          const next = this.currentPlayer === 1 ? 2 : 1;
+          const next = this.currentPlayer===1?2:1;
           this.currentPlayer = next;
           this.pushUi({ turn: next, message: `Scratch! Player ${next} — ball in hand` });
           startTimer(next);
@@ -361,7 +467,7 @@ export default function PoolGame() {
 
       timeoutTurn() {
         if (this.shooting || this.winner) return;
-        const next = this.currentPlayer === 1 ? 2 : 1;
+        const next = this.currentPlayer===1?2:1;
         this.currentPlayer = next;
         this.pushUi({ turn: next, message: `Time's up! Player ${next}'s turn` });
         startTimer(next);
@@ -369,12 +475,12 @@ export default function PoolGame() {
 
       resolveTurn() {
         if (this.winner) return;
-        const myType   = this.playerType[this.currentPlayer];
+        const myType = this.playerType[this.currentPlayer];
         const pottedOwn = this.pottedThisTurn.some(n => {
           if (!myType) return n !== 8;
-          return myType === "solids" ? (n >= 1 && n <= 7) : (n >= 9 && n <= 15);
+          return myType === "solids" ? (n>=1&&n<=7) : (n>=9&&n<=15);
         });
-        const next = pottedOwn ? this.currentPlayer : (this.currentPlayer === 1 ? 2 : 1);
+        const next = pottedOwn ? this.currentPlayer : (this.currentPlayer===1?2:1);
         this.currentPlayer = next;
         this.pushUi({ turn: next, ballsMoving: false, message: `Player ${next}'s turn` });
         startTimer(next);
@@ -388,71 +494,68 @@ export default function PoolGame() {
         }));
       }
 
-      pushUi(patch) {
-        this.syncScores();
-        setUi(s => ({ ...s, ...patch }));
-      }
+      pushUi(patch) { this.syncScores(); setUi(s => ({ ...s, ...patch })); }
     }
 
     gameRef.current = new Phaser.Game({
       type: Phaser.AUTO,
-      width: 1000,
-      height: 600,
+      width: 1000, height: 600,
       parent: mountRef.current,
       backgroundColor: "#0d1117",
       physics: { default: "arcade", arcade: { debug: false, gravity: { x:0, y:0 } } },
       scene: PoolScene,
     });
 
-    return () => {
-      gameRef.current?.destroy(true);
-      gameRef.current = null;
-      sceneRef.current = null;
-    };
+    return () => { gameRef.current?.destroy(true); gameRef.current = null; sceneRef.current = null; };
   // eslint-disable-next-line
   }, []);
 
-  // ── React components ─────────────────────────────────────────────────────────
-  const BallIcon = ({ num, size = 20 }) => {
-    const hex  = num === 0 ? "#ffffff" : `#${BALL_COLORS[num].toString(16).padStart(6,"0")}`;
-    const stripe = num >= 9;
+  // ── React UI ─────────────────────────────────────────────────────────────────
+  const BallIcon = ({ num, size = 22 }) => {
+    const def    = BALL_DEF[num];
+    const stripe = def.stripe;
+    const bgStyle = stripe
+      ? `linear-gradient(180deg,#fff 28%,${def.color} 28%,${def.color} 72%,#fff 72%)`
+      : def.color;
     return (
       <div style={{
         width: size, height: size, borderRadius: "50%", flexShrink: 0,
-        background: stripe
-          ? `linear-gradient(180deg,#fff 28%,${hex} 28%,${hex} 72%,#fff 72%)`
-          : hex,
+        background: bgStyle,
         border: "1.5px solid rgba(255,255,255,0.3)",
-        boxShadow: `0 0 5px ${hex}66`,
+        boxShadow: `0 0 5px ${def.color}77`,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: size * 0.36 + "px", fontWeight: "bold",
-        color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+        fontSize: size * 0.33 + "px", fontWeight: "bold",
+        color: "#111", textShadow: "none",
+        fontFamily: "Arial, sans-serif",
+        position: "relative",
       }}>
-        {num > 0 ? num : ""}
+        <span style={{
+          background: "rgba(255,255,255,0.9)", borderRadius: "50%",
+          width: "55%", height: "55%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: size * 0.3 + "px", color: "#111", fontWeight: "bold",
+        }}>
+          {num > 0 ? num : ""}
+        </span>
       </div>
     );
   };
 
-  // Circular SVG timer ring around the avatar
   const TimerRing = ({ seconds, isActive }) => {
-    const r = 22, cx = 24, cy = 24;
+    const r = 22, cxy = 24;
     const circ = 2 * Math.PI * r;
     const pct  = seconds / TURN_SECONDS;
-    const dash = circ * pct;
     const color = seconds <= 8 ? "#ef4444" : seconds <= 15 ? "#f59e0b" : "#4ade80";
     return (
-      <svg width={48} height={48} style={{ position: "absolute", top: -3, left: -3, pointerEvents: "none" }}>
-        {/* track */}
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={3} />
-        {/* progress */}
+      <svg width={48} height={48} style={{ position:"absolute",top:-3,left:-3,pointerEvents:"none" }}>
+        <circle cx={cxy} cy={cxy} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={3}/>
         {isActive && (
-          <circle
-            cx={cx} cy={cy} r={r} fill="none"
+          <circle cx={cxy} cy={cxy} r={r} fill="none"
             stroke={color} strokeWidth={3}
-            strokeDasharray={`${dash} ${circ}`}
+            strokeDasharray={`${circ*pct} ${circ}`}
             strokeLinecap="round"
-            transform={`rotate(-90 ${cx} ${cy})`}
-            style={{ transition: "stroke-dasharray 0.9s linear, stroke 0.3s" }}
+            transform={`rotate(-90 ${cxy} ${cxy})`}
+            style={{ transition:"stroke-dasharray 0.9s linear,stroke 0.3s" }}
           />
         )}
       </svg>
@@ -460,53 +563,40 @@ export default function PoolGame() {
   };
 
   const PlayerPanel = ({ player, data, isActive, timeLeft }) => {
-    const p1Color = "#e06010"; const p2Color = "#1a4fcc";
-    const accent  = player === 1 ? p1Color : p2Color;
+    const accent = player===1 ? "#e06010" : "#1a4fcc";
     return (
       <div style={{
-        display: "flex", alignItems: "center", gap: 12,
+        display:"flex", alignItems:"center", gap:12,
         background: isActive ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.35)",
-        border: `2px solid ${isActive ? "#4ade80" : "rgba(255,255,255,0.1)"}`,
-        borderRadius: 14, padding: "8px 14px",
-        transition: "all 0.3s", minWidth: 210,
+        border: `2px solid ${isActive?"#4ade80":"rgba(255,255,255,0.1)"}`,
+        borderRadius:14, padding:"8px 14px", transition:"all 0.3s", minWidth:210,
       }}>
-        {/* Avatar with timer ring */}
-        <div style={{ position: "relative", width: 42, height: 42, flexShrink: 0 }}>
+        <div style={{ position:"relative", width:42, height:42, flexShrink:0 }}>
           <div style={{
-            width: 42, height: 42, borderRadius: "50%",
-            background: `linear-gradient(135deg,${accent},${accent}88)`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, border: `2px solid ${isActive ? "#4ade80" : "rgba(255,255,255,0.2)"}`,
+            width:42, height:42, borderRadius:"50%",
+            background:`linear-gradient(135deg,${accent},${accent}88)`,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:20, border:`2px solid ${isActive?"#4ade80":"rgba(255,255,255,0.2)"}`,
           }}>
-            {player === 1 ? "🧑" : "👤"}
+            {player===1?"🧑":"👤"}
           </div>
           <TimerRing seconds={timeLeft} isActive={isActive && !ui.winner && !ui.ballsMoving} />
         </div>
-
-        <div style={{ flex: 1 }}>
-          <div style={{ color: isActive ? "#4ade80" : "#ccc", fontWeight: "bold", fontSize: 13, letterSpacing: 1 }}>
+        <div style={{flex:1}}>
+          <div style={{color:isActive?"#4ade80":"#ccc",fontWeight:"bold",fontSize:13,letterSpacing:1}}>
             {data.name}
           </div>
-          <div style={{ color: "#888", fontSize: 11 }}>
-            {data.type || "unassigned"} · {data.score} potted
-          </div>
+          <div style={{color:"#888",fontSize:11}}>{data.type||"unassigned"} · {data.score} potted</div>
         </div>
-
-        {/* Countdown number */}
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center",
-          minWidth: 38,
-        }}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:38}}>
           <div style={{
-            fontSize: 22, fontWeight: "bold", lineHeight: 1,
-            color: isActive
-              ? (timeLeft <= 8 ? "#ef4444" : timeLeft <= 15 ? "#f59e0b" : "#4ade80")
-              : "rgba(255,255,255,0.25)",
-            transition: "color 0.3s",
+            fontSize:22, fontWeight:"bold", lineHeight:1,
+            color: isActive ? (timeLeft<=8?"#ef4444":timeLeft<=15?"#f59e0b":"#4ade80") : "rgba(255,255,255,0.2)",
+            transition:"color 0.3s",
           }}>
             {isActive ? timeLeft : "—"}
           </div>
-          {isActive && <div style={{ fontSize: 9, color: "#555", letterSpacing: 1 }}>SEC</div>}
+          {isActive && <div style={{fontSize:9,color:"#555",letterSpacing:1}}>SEC</div>}
         </div>
       </div>
     );
@@ -514,29 +604,28 @@ export default function PoolGame() {
 
   const PottedRack = ({ p1, p2 }) => {
     const all = [
-      ...p1.potted.map(n => ({ n, player: 1 })),
-      ...p2.potted.map(n => ({ n, player: 2 })),
-    ].sort((a,b) => a.n - b.n);
+      ...p1.potted.map(n=>({n,player:1})),
+      ...p2.potted.map(n=>({n,player:2})),
+    ].sort((a,b)=>a.n-b.n);
     return (
       <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-        background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 12, padding: "10px 8px", minHeight: 200, minWidth: 46,
+        display:"flex",flexDirection:"column",alignItems:"center",gap:5,
+        background:"rgba(0,0,0,0.55)",border:"1px solid rgba(255,255,255,0.1)",
+        borderRadius:12,padding:"10px 7px",minHeight:200,minWidth:44,
       }}>
-        <div style={{
-          color: "#666", fontSize: 9, letterSpacing: 1, marginBottom: 4,
-          writingMode: "vertical-rl", transform: "rotate(180deg)",
-        }}>POTTED</div>
-        {all.length === 0 && <div style={{ color: "#333", fontSize: 10 }}>—</div>}
-        {all.map((item, i) => (
-          <div key={i} style={{ position: "relative" }}>
-            <BallIcon num={item.n} size={28} />
+        <div style={{color:"#555",fontSize:9,letterSpacing:1,marginBottom:4,writingMode:"vertical-rl",transform:"rotate(180deg)"}}>
+          POTTED
+        </div>
+        {all.length===0 && <div style={{color:"#333",fontSize:10}}>—</div>}
+        {all.map((item,i)=>(
+          <div key={i} style={{position:"relative"}}>
+            <BallIcon num={item.n} size={28}/>
             <div style={{
-              position: "absolute", top: -3, right: -3,
-              width: 10, height: 10, borderRadius: "50%",
-              background: item.player === 1 ? "#e06010" : "#1a4fcc",
-              border: "1px solid #fff",
-            }} />
+              position:"absolute",top:-2,right:-2,
+              width:9,height:9,borderRadius:"50%",
+              background:item.player===1?"#e06010":"#1a4fcc",
+              border:"1px solid #fff",
+            }}/>
           </div>
         ))}
       </div>
@@ -545,103 +634,65 @@ export default function PoolGame() {
 
   return (
     <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(160deg,#0d1117 0%,#12151e 100%)",
-      display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "center",
-      fontFamily: "'Georgia','Times New Roman',serif",
-      userSelect: "none", padding: 16,
+      minHeight:"100vh",
+      background:"linear-gradient(160deg,#0d1117 0%,#12151e 100%)",
+      display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      fontFamily:"'Georgia','Times New Roman',serif",
+      userSelect:"none",padding:16,
     }}>
-      {/* Title */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <span style={{ fontSize: "1.5rem" }}>🎱</span>
-        <h1 style={{
-          margin: 0, fontSize: "1.6rem", letterSpacing: 4,
-          color: "#e8c97a", textTransform: "uppercase",
-          textShadow: "0 0 18px rgba(232,201,122,0.5)",
-        }}>TheCueArena</h1>
-        <span style={{ fontSize: "1.5rem" }}>🎱</span>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+        <span style={{fontSize:"1.5rem"}}>🎱</span>
+        <h1 style={{margin:0,fontSize:"1.6rem",letterSpacing:4,color:"#e8c97a",textTransform:"uppercase",textShadow:"0 0 18px rgba(232,201,122,0.5)"}}>
+          TheCueArena
+        </h1>
+        <span style={{fontSize:"1.5rem"}}>🎱</span>
       </div>
 
-      {/* HUD */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 14, marginBottom: 10,
-        width: "100%", maxWidth: 1060, justifyContent: "space-between",
-      }}>
-        <PlayerPanel player={1} data={ui.p1} isActive={ui.turn===1 && !ui.winner} timeLeft={ui.p1Time} />
-
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{
-            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 10, padding: "8px 16px",
-            color: ui.winner ? "#fbbf24" : "#e2e8f0", fontSize: 13, marginBottom: 6,
-          }}>
+      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:10,width:"100%",maxWidth:1060,justifyContent:"space-between"}}>
+        <PlayerPanel player={1} data={ui.p1} isActive={ui.turn===1&&!ui.winner} timeLeft={ui.p1Time}/>
+        <div style={{flex:1,textAlign:"center"}}>
+          <div style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"8px 16px",color:ui.winner?"#fbbf24":"#e2e8f0",fontSize:13,marginBottom:6}}>
             {ui.message}
           </div>
-          {/* Power bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-            <span style={{ color: "#555", fontSize: 10, letterSpacing: 1 }}>PWR</span>
-            <div style={{ width: 140, height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
+            <span style={{color:"#555",fontSize:10,letterSpacing:1}}>PWR</span>
+            <div style={{width:140,height:8,background:"rgba(255,255,255,0.1)",borderRadius:4,overflow:"hidden"}}>
               <div style={{
-                width: `${ui.power}%`, height: "100%", borderRadius: 4,
-                background: ui.power > 70 ? "#ef4444" : ui.power > 40 ? "#f59e0b" : "#22c55e",
-                transition: "width 0.04s",
-              }} />
+                width:`${ui.power}%`,height:"100%",borderRadius:4,
+                background:ui.power>70?"#ef4444":ui.power>40?"#f59e0b":"#22c55e",
+                transition:"width 0.04s",
+              }}/>
             </div>
-            <span style={{ color: "#e8c97a", fontSize: 11, minWidth: 28 }}>{ui.power}%</span>
+            <span style={{color:"#e8c97a",fontSize:11,minWidth:28}}>{ui.power}%</span>
           </div>
         </div>
-
-        <PlayerPanel player={2} data={ui.p2} isActive={ui.turn===2 && !ui.winner} timeLeft={ui.p2Time} />
+        <PlayerPanel player={2} data={ui.p2} isActive={ui.turn===2&&!ui.winner} timeLeft={ui.p2Time}/>
       </div>
 
-      {/* Canvas + potted rack */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{
-          borderRadius: 14, overflow: "hidden",
-          boxShadow: "0 0 50px rgba(0,0,0,0.8), 0 0 16px rgba(232,201,122,0.07)",
-          border: "2px solid rgba(232,201,122,0.15)",
-        }}>
-          <div ref={mountRef} />
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{borderRadius:14,overflow:"hidden",boxShadow:"0 0 50px rgba(0,0,0,0.8),0 0 16px rgba(232,201,122,0.07)",border:"2px solid rgba(232,201,122,0.15)"}}>
+          <div ref={mountRef}/>
         </div>
-        <PottedRack p1={ui.p1} p2={ui.p2} />
+        <PottedRack p1={ui.p1} p2={ui.p2}/>
       </div>
 
-      {/* Hints */}
-      <div style={{ marginTop: 10, display: "flex", gap: 20, color: "#3a3a4a", fontSize: 11, letterSpacing: 1 }}>
+      <div style={{marginTop:10,display:"flex",gap:20,color:"#3a3a4a",fontSize:11,letterSpacing:1}}>
         <span>🖱 DRAG from cue ball</span>
         <span>↔ DISTANCE = POWER</span>
         <span>🖱 RELEASE to shoot</span>
       </div>
 
-      {/* Winner overlay */}
       {ui.winner && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)",
-          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999,
-        }}>
-          <div style={{
-            background: "linear-gradient(135deg,#1a1a2e,#16213e)",
-            border: "2px solid #e8c97a", borderRadius: 20,
-            padding: "48px 64px", textAlign: "center",
-            boxShadow: "0 0 80px rgba(232,201,122,0.3)",
-          }}>
-            <div style={{ fontSize: "3rem", marginBottom: 10 }}>🏆</div>
-            <h2 style={{ color: "#e8c97a", fontSize: "2rem", margin: "0 0 8px", letterSpacing: 2 }}>
-              PLAYER {ui.winner} WINS!
-            </h2>
-            <p style={{ color: "#888", marginBottom: 28 }}>
-              P1: {ui.p1.score} potted · P2: {ui.p2.score} potted
-            </p>
-            <button onClick={() => window.location.reload()} style={{
-              background: "linear-gradient(135deg,#e8c97a,#c9a227)",
-              color: "#1a1a2e", border: "none", borderRadius: 10,
-              padding: "12px 36px", fontSize: "1rem",
-              fontWeight: "bold", cursor: "pointer",
-              letterSpacing: 2, textTransform: "uppercase",
-            }}>
-              Play Again
-            </button>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
+          <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",border:"2px solid #e8c97a",borderRadius:20,padding:"48px 64px",textAlign:"center",boxShadow:"0 0 80px rgba(232,201,122,0.3)"}}>
+            <div style={{fontSize:"3rem",marginBottom:10}}>🏆</div>
+            <h2 style={{color:"#e8c97a",fontSize:"2rem",margin:"0 0 8px",letterSpacing:2}}>PLAYER {ui.winner} WINS!</h2>
+            <p style={{color:"#888",marginBottom:28}}>P1: {ui.p1.score} potted · P2: {ui.p2.score} potted</p>
+            <button onClick={()=>window.location.reload()} style={{
+              background:"linear-gradient(135deg,#e8c97a,#c9a227)",color:"#1a1a2e",border:"none",
+              borderRadius:10,padding:"12px 36px",fontSize:"1rem",fontWeight:"bold",cursor:"pointer",
+              letterSpacing:2,textTransform:"uppercase",
+            }}>Play Again</button>
           </div>
         </div>
       )}
