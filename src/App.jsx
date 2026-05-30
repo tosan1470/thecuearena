@@ -1262,7 +1262,7 @@ export default function App() {
           </div>
         </div>
       )}
-      <PoolGame />
+      {isInGame && <PoolGame />}
     </>
   );
 }
