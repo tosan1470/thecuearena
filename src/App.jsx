@@ -1262,7 +1262,13 @@ export default function App() {
           </div>
         </div>
       )}
-      {isInGame && <PoolGame />}
+      {isInGame ? (
+  <PoolGame />
+) : (
+  <div>
+    {/* Main Lobby */}
+  </div>
+)}
     </>
   );
 }
