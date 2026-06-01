@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import logo from "./assets/logo.png";
 import PoolGame from "./PoolGame";
+import GamePage from "./GamePage";
+import { Routes, Route } from "react-router-dom";
 import {
   collection,
   addDoc,
@@ -1262,12 +1264,21 @@ export default function App() {
           </div>
         </div>
       )}
-      {isInGame ? (
-  <PoolGame />
-) : (
-  <div>
-    {/* Main Lobby */}
-  </div>
+<Routes>
+  <Route
+    path="/"
+    element={
+      <div>
+        {/* Main Lobby */}
+      </div>
+    }
+  />
+
+  <Route
+    path="/game"
+    element={<GamePage />}
+  />
+</Routes>
 )}
     </>
   );
