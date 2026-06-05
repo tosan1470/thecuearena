@@ -1264,22 +1264,7 @@ export default function App() {
           </div>
         </div>
       )}
-<Routes>
-  <Route
-    path="/"
-    element={
-      <div>
-        {/* Main Lobby */}
-      </div>
-    }
-  />
 
-  <Route
-    path="/game"
-    element={<GamePage />}
-  />
-</Routes>
-)}
     </>
   );
 }
