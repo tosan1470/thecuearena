@@ -1,21 +1,28 @@
 const express = require("express");
 const cors = require("cors");
 const Stripe = require("stripe");
-let userBalance = 0;
+const admin = require("firebase-admin");
+const serviceAccount = require("/etc/secrets/firebase-service-account.json");
 let matches = [];
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+const db = admin.firestore();
 app.post("/create-checkout-session", async (req, res) => {
-  const { amount } = req.body;
+  const { amount, uid } = req.body;
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
 metadata: {
   amount: amount,
+  uid: uid,
 },
     line_items: [
       {
@@ -36,15 +43,22 @@ metadata: {
   res.json({ url: session.url });
 });
 
-app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
-  const event = req.body;
-
+app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const amount = session.metadata.amount;
+    const uid = session.metadata.uid;
 
-    userBalance += Number(amount);
-    console.log("Balance updated:", userBalance);
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+
+    if (userDoc.exists) {
+    const currentBalance = userDoc.data().balance || 0;
+
+  await userRef.update({
+    balance: currentBalance + Number(amount),
+  });
+}
   }
 
   res.sendStatus(200);
