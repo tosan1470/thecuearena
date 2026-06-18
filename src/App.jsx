@@ -3,6 +3,7 @@ import logo from "./assets/logo.png";
 import PoolGame from "./PoolGame";
 import GamePage from "./GamePage";
 import { Routes, Route } from "react-router-dom";
+
 import {
   collection,
   addDoc,
@@ -74,7 +75,7 @@ export default function App() {
   const [agreedPP, setAgreedPP]         = useState(false);
   const [modalContent, setModalContent] = useState(null);
   const [user, setUser] = useState(null);
-
+  const [gameFinished, setGameFinished] = useState(false);
   const windowWidth = useWindowWidth();
   const isMobile    = windowWidth < 768;
 
@@ -584,8 +585,12 @@ export default function App() {
 
   // ── Everything else: lobby / waiting / finished screens ──────────────────
   return (
-    <>
-      <Header />
+    <Routes>
+  <Route
+    path="/"
+    element={
+      <>
+        <Header />
 
       {!user ? (
         /* ══ LOGIN / SIGN UP ══════════════════════════════════════════════════ */
@@ -764,6 +769,44 @@ export default function App() {
 
           {/* ── WAITING FOR OPPONENT ── */}
           {match?.status === "waiting" && (
+            <div style={{ marginTop: "15px" }}>
+              <p>Bet: ${match.bet} &mdash; Waiting for opponent...</p>
+              <button onClick={handleCancelMatch}
+                style={{ ...btnBase, background: "#ef4444", fontSize: "13px", padding: "8px 14px" }}>
+                Cancel Match
+              </button>
+            </div>
+          )}
+
+          {/* Playing &mdash; uses derived isPlaying so it works for both creator and joiner */}
+          {isPlaying && (
+            <div style={{ marginTop: "15px" }}>
+              <p style={{ marginBottom: "10px" }}>
+                Game in progress vs{" "}
+                <strong>
+                  {match.player1 === userId ? match.player2Name : match.player1Name}
+                </strong>
+              </p>
+              <p style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "12px" }}>
+                Both players must confirm the result. If both claim a win, the match goes to admin review.
+              </p>
+              <button onClick={() => handleSubmitResult("win")}
+                style={{ ...glowBtn("#22c55e", "34,197,94", false), marginRight: "10px" }}>
+                I Won
+              </button>
+              <button onClick={() => handleSubmitResult("loss")}
+                style={{ ...glowBtn("#ef4444", "239,68,68", false), marginRight: "10px" }}>
+                I Lost
+              </button>
+              <button onClick={handleDispute}
+                style={{ ...glowBtn("#f59e0b", "245,158,11", false) }}>
+                Dispute
+              </button>
+            </div>
+          )}
+
+          {/* -- Chat &mdash; visible whenever a match is active or just finished -- */}
+          {match && (match.status === "playing" || match.status === "finished" || match.status === "disputed") && (
             <div style={{
               marginTop: "24px", background: "#1e293b", borderRadius: "16px",
               border: "1px solid #334155", padding: "24px", textAlign: "center",
@@ -947,8 +990,14 @@ export default function App() {
               I Agree
             </button>
           </div>
-        </div>
+       </div>
       )}
+      <PoolGame />
     </>
   );
+}
+
+  <Route path="/game" element={<GamePage />} />
+</Routes>
+);
 }

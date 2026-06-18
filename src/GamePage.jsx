@@ -1,4 +1,3 @@
-import React from "react";
 import PoolGame from "./PoolGame";
 
 export default function GamePage() {
@@ -7,9 +6,13 @@ export default function GamePage() {
       style={{
         minHeight: "100vh",
         background: "#0f172a",
-        color: "white",
+        padding: "20px",
       }}
     >
+      <h1 style={{ color: "white", textAlign: "center" }}>
+        Pool Game
+      </h1>
+
       <PoolGame />
     </div>
   );
