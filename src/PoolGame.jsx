@@ -876,26 +876,6 @@ export default function PoolGame({ onSubmitResult, onDispute, match, userId }) {
         <span>🎯 CLICK spin indicator to apply english</span>
       </div>
 
-      {/* Result buttons (when match prop provided) */}
-      {onSubmitResult && !ui.winner && (
-        <div style={{marginTop:12,display:"flex",gap:10}}>
-          <button onClick={() => onSubmitResult("win")} style={{
-            padding:"10px 22px",borderRadius:10,border:"none",background:"#22c55e",
-            color:"white",fontWeight:"bold",cursor:"pointer",boxShadow:"0 0 12px rgba(34,197,94,0.4)",
-          }}>I Won</button>
-          <button onClick={() => onSubmitResult("loss")} style={{
-            padding:"10px 22px",borderRadius:10,border:"none",background:"#ef4444",
-            color:"white",fontWeight:"bold",cursor:"pointer",boxShadow:"0 0 12px rgba(239,68,68,0.4)",
-          }}>I Lost</button>
-          {onDispute && (
-            <button onClick={onDispute} style={{
-              padding:"10px 22px",borderRadius:10,border:"none",background:"#f59e0b",
-              color:"white",fontWeight:"bold",cursor:"pointer",
-            }}>Dispute</button>
-          )}
-        </div>
-      )}
-
       {/* Winner overlay */}
       {ui.winner && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
